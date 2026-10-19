@@ -1,11 +1,11 @@
-<!-- File: index.html | Version: 4.8.1-PWA | Date: 2026-10-18 -->
+<!-- File: index.html | Version: 4.9.0-Notifications | Date: 2026-10-19 -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" data-theme="light" data-accent="teal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <meta name="theme-color" content="#0f766e">
-  <title>میز کار هوشمند کارمند | نسخه ۴.۸</title>
+  <title>میز کار هوشمند کارمند | نسخه ۴.۹</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -594,6 +594,17 @@
     .mk-note { font-size:0.74rem; color:var(--text-muted); margin-top:14px; line-height:1.9; }
     @media (max-width: 820px) { .mk-quick { grid-template-columns:repeat(2, 1fr); } .mk-grid { grid-template-columns:repeat(2, 1fr); } .mk-price { font-size:1.1rem; } }
     @media (max-width: 420px) { .mk-grid { grid-template-columns:1fr; } }
+
+    /* v4.9 — notification permission card + settings helpers */
+    .notif-ask { position:fixed; z-index:2500; left:16px; bottom:16px; width:min(380px, calc(100vw - 32px)); background:var(--bg-surface); border:1px solid var(--primary); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:14px; transform:translateY(20px); opacity:0; transition:transform .25s ease, opacity .25s ease; }
+    .notif-ask.show { transform:none; opacity:1; }
+    .notif-ask[hidden] { display:none; }
+    .notif-ask-title { font-weight:800; font-size:0.95rem; margin-bottom:4px; }
+    .notif-ask-text { font-size:0.82rem; color:var(--text-secondary); line-height:1.8; }
+    .notif-ask-actions { display:flex; gap:8px; margin-top:10px; }
+    .notif-ask-actions .btn { flex:1; }
+    .perm-help { font-size:0.78rem; line-height:1.9; color:var(--text-secondary); background:var(--danger-soft); border-inline-start:3px solid var(--danger); border-radius:6px; padding:8px 12px; margin:8px 14px 12px; }
+    @media (max-width: 820px) { .notif-ask { left:8px; right:8px; width:auto; bottom:calc(76px + env(safe-area-inset-bottom, 0px)); } }
   </style>
 <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -610,7 +621,7 @@
         <div class="brand-icon" aria-hidden="true">م</div>
         <div>
           <div class="brand-title">میز کار کارمند</div>
-          <div class="brand-sub">نسخه ۴.۸ | ساده و آفلاین</div>
+          <div class="brand-sub">نسخه ۴.۹ | ساده و آفلاین</div>
         </div>
       </div>
 
@@ -1511,24 +1522,51 @@
               </div>
             </div>
 
-            <div class="set-group-title">اعلان سیستم (مرورگر)</div>
+            <div class="set-group-title">اعلان‌های گوشی (سیستم)</div>
             <div class="set-group">
               <div class="set-row">
-                <div class="set-row-text"><div class="set-row-title">خلاصهٔ روزانه</div><div class="set-row-sub" id="notifySysHint">فقط وقتی برنامه باز است نمایش داده می‌شود</div></div>
+                <div class="set-row-text"><div class="set-row-title">وضعیت اجازه</div><div class="set-row-sub" id="notifPermState">—</div></div>
+                <button type="button" class="btn btn-primary btn-sm" id="btnNotifPerm">🔔 درخواست اجازه</button>
+              </div>
+              <div class="perm-help" id="notifPermHelp" style="display:none;">اعلان‌ها در مرورگر مسدود شده‌اند. اندروید: روی آیکون برنامه نگه دارید، «اطلاعات برنامه» و بعد «اعلان‌ها» را روشن کنید. یا در Chrome: منوی ⋮ ← تنظیمات ← تنظیمات سایت ← اعلان‌ها. آیفون: تنظیمات ← اعلان‌ها ← «میز کار».</div>
+              <div class="set-row">
+                <div class="set-row-text"><div class="set-row-title">نمایش اعلان روی گوشی</div><div class="set-row-sub">یادآورها، اقساط و خلاصهٔ روز</div></div>
                 <label class="switch"><input type="checkbox" id="setNotifySystem" data-set="notifySystem" aria-label="اعلان سیستم"><span></span></label>
               </div>
               <div class="set-row">
-                <div class="set-row-text"><div class="set-row-title">ساعت خلاصهٔ روزانه</div></div>
+                <div class="set-row-text"><div class="set-row-title">پیش‌اعلان یادآورها</div></div>
+                <select id="setNotifyLead" class="select" data-set="notifyLead" aria-label="پیش اعلان یادآورها">
+                  <option value="0">سر ساعت</option>
+                  <option value="5">۵ دقیقه قبل</option>
+                  <option value="10">۱۰ دقیقه قبل</option>
+                  <option value="30">۳۰ دقیقه قبل</option>
+                  <option value="60">۱ ساعت قبل</option>
+                </select>
+              </div>
+              <div class="set-row">
+                <div class="set-row-text"><div class="set-row-title">ساعت خلاصهٔ روزانه و اقساط</div></div>
                 <div class="ip-hostbox"><input type="text" id="setNotifyTime" class="input ltr-input" data-set="notifyTime" data-picker="time" inputmode="numeric" maxlength="5" placeholder="07:30" aria-label="ساعت خلاصه روزانه"></div>
               </div>
               <div class="set-row">
-                <div class="set-row-text"><div class="set-row-title">آزمایش اعلان</div></div>
+                <div class="set-row-text"><div class="set-row-title">آزمایش اعلان</div><div class="set-row-sub">یک اعلان نمونه می‌فرستد</div></div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btnTestNotify">🔔 ارسال نمونه</button>
               </div>
             </div>
+
+            <div class="set-group-title">آلارم مطمئن (تقویم گوشی)</div>
+            <div class="set-group">
+              <div class="set-row">
+                <div class="set-row-text"><div class="set-row-title">ساخت فایل تقویم (.ics)</div><div class="set-row-sub">یادآورها و اقساط آینده با آلارم؛ حتی وقتی برنامه بسته است</div></div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnExportIcs">📅 ساخت فایل</button>
+              </div>
+            </div>
+            <div class="set-preview">
+              اعلان‌های بالا وقتی برنامه باز یا در پس‌زمینه است نمایش داده می‌شوند. هر بار که برنامه را باز کنید، موارد از‌دست‌رفته هم یادآوری می‌شوند. برای آلارم مطمئن وقتی برنامه کاملاً بسته است، از فایل تقویم استفاده کنید.
+            </div>
           </div>
 
-          <!-- ============ DATA & TESTS ============ -->
+          
+<!-- ============ DATA & TESTS ============ -->
           <div class="set-panel" data-setpanel="data">
             <div class="set-group-title">پشتیبان‌گیری (بدون اینترنت)</div>
             <div class="set-group">
@@ -1553,7 +1591,7 @@
 
             <div class="card" style="margin-top:16px;">
               <div class="card-head">
-                <div class="card-title">✅ تست خودکار سلامت (نسخه ۴.۸)</div>
+                <div class="card-title">✅ تست خودکار سلامت (نسخه ۴.۹)</div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btnReRunTests">تست مجدد</button>
               </div>
               <div class="table-container">
@@ -1646,6 +1684,14 @@
     </div>
   </div>
 
+  <div class="notif-ask" id="notifAsk" role="dialog" aria-labelledby="notifAskTitle" hidden>
+    <div class="notif-ask-title" id="notifAskTitle">🔔 اعلان‌ها را روشن کنیم؟</div>
+    <div class="notif-ask-text" id="notifAskText"></div>
+    <div class="notif-ask-actions">
+      <button type="button" class="btn btn-primary btn-sm" id="btnNotifAskYes">روشن کن</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnNotifAskLater">بعداً</button>
+    </div>
+  </div>
   <div class="notif-panel" id="notifPanel" role="region" aria-label="اعلان‌ها"></div>
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
@@ -2746,7 +2792,7 @@
         showShiftTab: 'hide', showFinanceTab: 'show', showBalanceChip: true,
         defaultTxType: 'expense', defaultLoanMode: 'direct',
         notifyEnabled: true, notifyToday: true, notifyReminders: true, notifyLoans: true, notifyLoanDays: '1',
-        notifySystem: false, notifyTime: '07:30',
+        notifySystem: true, notifyTime: '07:30', notifyLead: '0', notifyAsked: false, notifyMigrated49: false,
         density: 'simple', showMarketTab: 'show', marketAllowOnline: true, marketUnit: 'toman', marketRefresh: '5', marketTab: 'gold'
       };
       const FONT_STACKS = {
@@ -2846,7 +2892,7 @@
           if (s.notifyLoans) {
             const lead = Number(s.notifyLoanDays) || 0;
             FinanceModule.getLoans().forEach(ln => {
-              const a = FinanceModule.analyzeLoanSchedule(ln.dateMode, ln.anchorDate || ln.startDate, ln.totalMonths, { paidMonths: ln.paidMonths });
+              const a = FinanceModule.analyzeLoanSchedule(ln.dateMode, ln.anchorDate || ln.startDate, ln.totalMonths, { paidMonths: ln.paidMonths }, freshTodayKey());
               if (!a) return;
               const amt = Number(ln.installment) || 0;
               const late = a.overdueList.filter(x => x.daysPassed > 0);
@@ -2932,12 +2978,291 @@
       };
       notifyHook = () => NotifyModule.refresh();
 
+      /* =======================================================================
+         v4.9 — Reliable notifications (service-worker based), due-checks,
+         digest for background sync, permission onboarding, calendar (.ics) export
+      ======================================================================= */
+      const NOTIF_FIRED_KEY = 'emp_notif_fired_v49';
+      const DIGEST_CACHE = 'emp-digest-v49';
+
+      function isIosNotInstalled() {
+        const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+        return ios && !standalone;
+      }
+
+      NotifyModule.perm = function () { return ('Notification' in window) ? Notification.permission : 'unsupported'; };
+
+      /* Chrome on Android forbids `new Notification()`; the service worker must show it. */
+      NotifyModule.show = async function (title, body, opt) {
+        opt = opt || {};
+        const o = { body: body || '', icon: 'icon-192.png', badge: 'icon-192.png', lang: 'fa', dir: 'rtl', data: { view: opt.view || '' }, vibrate: [120, 60, 120] };
+        if (opt.tag) o.tag = opt.tag;
+        try {
+          if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg && reg.showNotification) { await reg.showNotification(title, o); return { ok: true, via: 'sw' }; }
+          }
+          new Notification(title, o);
+          return { ok: true, via: 'page' };
+        } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+      };
+
+      NotifyModule.sendSystem = async function () {
+        if (this.perm() !== 'granted') return false;
+        const r = await this.show('📊 خلاصهٔ امروز', this.summaryText(), { tag: 'daily-summary', view: 'view-calendar' });
+        return r.ok;
+      };
+
+      /* epoch ms (device local time) for a Jalali dateKey + "HH:MM", optionally shifted by whole days */
+      NotifyModule.atMs = function (dateKey, time, dayShift) {
+        const p = Fmt.parseDateKey(dateKey);
+        const tm = /^(\d{1,2}):(\d{2})$/.exec(Fmt.toEn(time || ''));
+        if (!p || !tm) return null;
+        const g = JalaliEngine.toGregorian(p.jy, p.jm, p.jd);
+        return new Date(g.gy, g.gm - 1, g.gd + (dayShift || 0), Number(tm[1]), Number(tm[2]), 0, 0).getTime();
+      };
+
+      NotifyModule.loanAnalyses = function () {
+        const out = [];
+        FinanceModule.getLoans().forEach(ln => {
+          const a = FinanceModule.analyzeLoanSchedule(ln.dateMode, ln.anchorDate || ln.startDate, ln.totalMonths, { paidMonths: ln.paidMonths }, freshTodayKey());
+          if (a) out.push({ ln, a });
+        });
+        return out;
+      };
+
+      /* every item that should notify, with its exact fire time (used by the page AND the background digest) */
+      NotifyModule.schedule = function () {
+        const s = AppState.settings, items = [];
+        const leadMin = Number(s.notifyLead) || 0;
+        const sumTime = s.notifyTime || '07:30';
+        const todayKey = freshTodayKey();
+        if (s.notifyReminders) {
+          NotesModule.getAll().forEach(n => {
+            if (n.done || !n.time || !n.dateKey || n.dateKey < todayKey) return;
+            const at = this.atMs(n.dateKey, n.time, 0);
+            if (at === null) return;
+            items.push({
+              key: `r:${n.id}:${n.dateKey}:${n.time}:${leadMin}`, at: at - leadMin * 60000,
+              title: '⏰ ' + n.title, view: 'view-notes',
+              body: leadMin ? `${Fmt.toFa(leadMin)} دقیقه دیگر، ساعت ${Fmt.toFa(n.time)}` : `ساعت ${Fmt.toFa(n.time)}`
+            });
+          });
+        }
+        if (s.notifyLoans) {
+          const lead = Number(s.notifyLoanDays) || 0;
+          this.loanAnalyses().forEach(({ ln, a }) => {
+            const id = ln.id || ln.name, amt = Fmt.sepFa(Number(ln.installment) || 0) + ' ریال';
+            const late = a.overdueList.filter(x => x.daysPassed > 0);
+            if (late.length) {
+              items.push({ key: `lo:${id}:${todayKey}`, at: this.atMs(todayKey, sumTime, 0), view: 'view-finance',
+                title: `🚨 ${ln.name}: ${Fmt.toFa(late.length)} قسط معوق`, body: `جمع: ${Fmt.sepFa(late.length * (Number(ln.installment) || 0))} ریال` });
+            }
+            a.allInstallments.filter(x => x.status !== 'paid' && x.daysPassed >= 0 && x.daysPassed < 1).forEach(x => {
+              items.push({ key: `l0:${id}:${x.dateKey}`, at: this.atMs(x.dateKey, sumTime, 0), view: 'view-finance', title: `🏦 قسط «${ln.name}» امروز سررسید است`, body: amt });
+            });
+            if (lead > 0) {
+              a.futureList.slice(0, 2).forEach(x => {
+                items.push({ key: `l1:${id}:${x.dateKey}:${lead}`, at: this.atMs(x.dateKey, sumTime, -lead), view: 'view-finance',
+                  title: `🏦 قسط «${ln.name}» تا ${Fmt.toFa(lead)} روز دیگر`, body: `${x.monthName} — ${amt}` });
+              });
+            }
+          });
+        }
+        return items.filter(i => i.at !== null && isFinite(i.at));
+      };
+
+      NotifyModule.readShown = async function () {
+        try {
+          if (!('caches' in window)) return {};
+          const c = await caches.open(DIGEST_CACHE);
+          const r = await c.match('shown.json');
+          return r ? await r.json() : {};
+        } catch (e) { return {}; }
+      };
+
+      /* fires everything that is due now (also catches up on things missed while the app was closed) */
+      NotifyModule.checkDue = async function () {
+        if (!AppState.settings.notifySystem || this.perm() !== 'granted') return 0;
+        const now = Date.now();
+        const fired = Object.assign({}, SafeStorage.get(NOTIF_FIRED_KEY, {}), await this.readShown());
+        let dirty = false, sent = 0;
+        Object.keys(fired).forEach(k => { if (now - fired[k] > 3 * 86400000) { delete fired[k]; dirty = true; } });
+        for (const it of this.schedule()) {
+          if (fired[it.key] || now < it.at || now - it.at > 12 * 3600000) continue;
+          const r = await this.show(it.title, it.body, { tag: it.key, view: it.view });
+          if (r.ok) { fired[it.key] = now; dirty = true; sent++; }
+        }
+        if (dirty) SafeStorage.set(NOTIF_FIRED_KEY, fired);
+        return sent;
+      };
+
+      NotifyModule.tick = async function () {
+        const s = AppState.settings;
+        if (!s.notifySystem || this.perm() !== 'granted') return;
+        await this.checkDue();
+        const n = new Date(), cur = n.getHours() * 60 + n.getMinutes(), tk = freshTodayKey();
+        const at = toMinutes(s.notifyTime, 450);
+        if (cur >= at && cur <= at + 360 && SafeStorage.get(NOTIF_LAST_KEY, '') !== tk) {
+          if (await this.sendSystem()) SafeStorage.set(NOTIF_LAST_KEY, tk);
+        }
+      };
+
+      /* digest for the service worker: it can only read the Cache Storage, not localStorage */
+      NotifyModule.writeDigest = async function () {
+        try {
+          if (!('caches' in window)) return;
+          const fired = SafeStorage.get(NOTIF_FIRED_KEY, {});
+          const now = Date.now();
+          const items = this.schedule().filter(i => !fired[i.key] && i.at > now - 12 * 3600000 && i.at < now + 8 * 86400000);
+          const c = await caches.open(DIGEST_CACHE);
+          await c.put('digest.json', new Response(JSON.stringify({
+            updatedAt: now, enabled: !!(AppState.settings.notifySystem && this.perm() === 'granted'), items
+          }), { headers: { 'content-type': 'application/json' } }));
+        } catch (e) { /* best effort */ }
+      };
+      (function () {
+        const baseRefresh = NotifyModule.refresh;
+        NotifyModule.refresh = function () {
+          baseRefresh.call(this);
+          clearTimeout(this._dt);
+          this._dt = setTimeout(() => this.writeDigest(), 800);
+        };
+      })();
+
+      /* Android/Chrome installed PWA can wake the service worker now and then (browser decides when) */
+      NotifyModule.registerPeriodic = async function () {
+        try {
+          if (!('serviceWorker' in navigator)) return false;
+          const reg = await navigator.serviceWorker.ready;
+          if (!reg.periodicSync) return false;
+          const st = await navigator.permissions.query({ name: 'periodic-background-sync' });
+          if (st.state !== 'granted') return false;
+          await reg.periodicSync.register('emp-digest', { minInterval: 60 * 60 * 1000 });
+          return true;
+        } catch (e) { return false; }
+      };
+
+      async function enableSystemNotifications() {
+        const s = AppState.settings;
+        const save = () => { SafeStorage.set(SETTINGS_KEY, s); applySettings(); };
+        if (!s.notifySystem) { applySettings(); return; }
+        if (!('Notification' in window)) {
+          s.notifySystem = false; save();
+          toast(isIosNotInstalled() ? 'در آیفون ابتدا برنامه را به صفحهٔ اصلی اضافه کنید و از همان‌جا باز کنید' : 'این مرورگر از اعلان پشتیبانی نمی‌کند');
+          return;
+        }
+        let p = Notification.permission;
+        if (p === 'default') {
+          p = await new Promise(res => { try { const r = Notification.requestPermission(res); if (r && r.then) r.then(res); } catch (e) { res('denied'); } });
+        }
+        if (p !== 'granted') {
+          s.notifySystem = false; save();
+          toast(p === 'denied' ? 'اجازهٔ اعلان مسدود است؛ از تنظیمات گوشی روشنش کنید' : 'اجازه داده نشد');
+          return;
+        }
+        save();
+        const r = await NotifyModule.show('✅ اعلان‌ها فعال شد', 'یادآورها و اقساط به‌موقع اعلام می‌شوند.', { tag: 'welcome', view: '' });
+        toast(r.ok ? '🔔 اعلان‌ها فعال شد' : 'اجازه داده شد ولی نمایش اعلان ممکن نشد: ' + r.error);
+        NotifyModule.registerPeriodic();
+        NotifyModule.writeDigest();
+        NotifyModule.tick();
+      }
+
+      function maybeAskNotify() {
+        const s = AppState.settings, card = document.getElementById('notifAsk');
+        if (!card || s.notifyAsked || s.notifyEnabled === false) return;
+        const wiz = document.getElementById('onboardingModal');
+        if (wiz && wiz.classList.contains('open')) return;
+        const perm = NotifyModule.perm(), ios = isIosNotInstalled();
+        if (perm === 'granted' || perm === 'denied') return;
+        if (perm === 'unsupported' && !ios) return;
+        document.getElementById('notifAskText').textContent = ios
+          ? 'برای دریافت اعلان در آیفون، اول برنامه را به صفحهٔ اصلی اضافه کنید (دکمهٔ اشتراک‌گذاری ← Add to Home Screen) و از همان‌جا باز کنید.'
+          : 'یادآورها، اقساط وام و خلاصهٔ روز را به‌موقع برایتان اعلام می‌کنم. فقط با اجازهٔ شما.';
+        document.getElementById('btnNotifAskYes').textContent = ios ? 'متوجه شدم' : 'روشن کن';
+        document.getElementById('btnNotifAskLater').style.display = ios ? 'none' : '';
+        card.hidden = false;
+        requestAnimationFrame(() => card.classList.add('show'));
+      }
+
+      /* Calendar file: native phone alarms that work even when the app is closed */
+      const IcsExport = {
+        esc(t) { return String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); },
+        fold(line) {
+          const enc = new TextEncoder();
+          let out = '', cur = '', bytes = 0;
+          for (const ch of line) {
+            const b = enc.encode(ch).length;
+            if (bytes + b > 75) { out += cur + '\r\n '; cur = ''; bytes = 1; }
+            cur += ch; bytes += b;
+          }
+          return out + cur;
+        },
+        d8(g) { return `${g.gy}${Fmt.pad2(g.gm)}${Fmt.pad2(g.gd)}`; },
+        dt(ms) { const d = new Date(ms); return `${d.getFullYear()}${Fmt.pad2(d.getMonth() + 1)}${Fmt.pad2(d.getDate())}T${Fmt.pad2(d.getHours())}${Fmt.pad2(d.getMinutes())}00`; },
+        build() {
+          const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Employee Smart Desk//FA//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:میز کار هوشمند'];
+          const n = new Date();
+          const stamp = `${n.getUTCFullYear()}${Fmt.pad2(n.getUTCMonth() + 1)}${Fmt.pad2(n.getUTCDate())}T${Fmt.pad2(n.getUTCHours())}${Fmt.pad2(n.getUTCMinutes())}00Z`;
+          const todayKey = freshTodayKey();
+          const leadMin = Number(AppState.settings.notifyLead) || 0;
+          let count = 0;
+          const alarm = (trig, text) => ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + this.esc(text), 'TRIGGER:' + trig, 'END:VALARM'];
+          NotesModule.getAll().forEach(nt => {
+            if (nt.done || !nt.dateKey || nt.dateKey < todayKey) return;
+            const p = Fmt.parseDateKey(nt.dateKey); if (!p) return;
+            const g = JalaliEngine.toGregorian(p.jy, p.jm, p.jd);
+            const ev = ['BEGIN:VEVENT', `UID:${nt.id}@emp-desk`, `DTSTAMP:${stamp}`, 'SUMMARY:' + this.esc('⏰ ' + nt.title)];
+            const at = nt.time ? NotifyModule.atMs(nt.dateKey, nt.time, 0) : null;
+            if (at !== null) {
+              ev.push(`DTSTART:${this.dt(at)}`, `DTEND:${this.dt(at + 15 * 60000)}`);
+              ev.push(...alarm('-PT0M', nt.title));
+              if (leadMin) ev.push(...alarm(`-PT${leadMin}M`, nt.title));
+            } else {
+              const nx = new Date(g.gy, g.gm - 1, g.gd + 1);
+              ev.push(`DTSTART;VALUE=DATE:${this.d8(g)}`, `DTEND;VALUE=DATE:${nx.getFullYear()}${Fmt.pad2(nx.getMonth() + 1)}${Fmt.pad2(nx.getDate())}`);
+              ev.push(...alarm('PT9H', nt.title));
+            }
+            ev.push('END:VEVENT'); L.push(...ev); count++;
+          });
+          NotifyModule.loanAnalyses().forEach(({ ln, a }) => {
+            const id = ln.id || ln.name, amt = Fmt.sepFa(Number(ln.installment) || 0) + ' ریال';
+            a.allInstallments.filter(x => x.status !== 'paid' && x.daysPassed <= 0).slice(0, 24).forEach(x => {
+              const g = JalaliEngine.toGregorian(x.jy, x.jm, x.jd);
+              const nx = new Date(g.gy, g.gm - 1, g.gd + 1);
+              const text = `قسط «${ln.name}» — ${amt}`;
+              L.push('BEGIN:VEVENT', `UID:loan-${id}-${x.dateKey}@emp-desk`, `DTSTAMP:${stamp}`, 'SUMMARY:' + this.esc('🏦 ' + text),
+                `DTSTART;VALUE=DATE:${this.d8(g)}`, `DTEND;VALUE=DATE:${nx.getFullYear()}${Fmt.pad2(nx.getMonth() + 1)}${Fmt.pad2(nx.getDate())}`,
+                ...alarm('-PT15H', 'فردا ' + text), ...alarm('PT9H', 'امروز ' + text), 'END:VEVENT');
+              count++;
+            });
+          });
+          L.push('END:VCALENDAR');
+          return { count, text: L.map(l => this.fold(l)).join('\r\n') + '\r\n' };
+        },
+        download() {
+          const r = this.build();
+          if (!r.count) { toast('موردی برای افزودن به تقویم نیست'); return; }
+          const blob = new Blob([r.text], { type: 'text/calendar;charset=utf-8' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'emp-desk-alarms.ics';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          toast(`📅 فایل تقویم با ${Fmt.toFa(r.count)} مورد ساخته شد؛ آن را باز کنید و به تقویم گوشی اضافه کنید`);
+        }
+      };
+
+
+
       const DATA_KEYS_FN = () => [SETTINGS_KEY, ONBOARD_KEY, SHIFTS_CONFIG_KEY, CUSTOM_PATTERNS_KEY, SHIFT_OVERRIDES_KEY, NOTES_KEY, FIN_TX_KEY, FIN_LOANS_KEY];
       const DataBackup = {
         exportAll() {
           const data = {};
           DATA_KEYS_FN().forEach(k => { const v = SafeStorage.get(k, null); if (v !== null) data[k] = v; });
-          const payload = { app: 'employee-smart-desk', version: '4.8.0', exportedAt: new Date().toISOString(), data };
+          const payload = { app: 'employee-smart-desk', version: '4.9.0', exportedAt: new Date().toISOString(), data };
           const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
@@ -3330,11 +3655,17 @@
         });
         const rowAuto = document.getElementById('rowAutoDark');
         if (rowAuto) rowAuto.style.display = s.themeMode === 'time' ? '' : 'none';
-        const hint = document.getElementById('notifySysHint');
-        if (hint) {
-          hint.textContent = ('Notification' in window && Notification.permission === 'denied')
-            ? 'اجازهٔ اعلان در مرورگر مسدود است'
-            : 'فقط وقتی برنامه باز است نمایش داده می‌شود';
+        const ps = document.getElementById('notifPermState');
+        if (ps) {
+          const p = (typeof NotifyModule !== 'undefined' && NotifyModule.perm) ? NotifyModule.perm() : 'unsupported';
+          const map = { granted: 'مجاز ✅', denied: 'مسدود ⛔', default: 'هنوز پرسیده نشده', unsupported: 'در این مرورگر پشتیبانی نمی‌شود' };
+          ps.textContent = map[p] || p;
+          const help = document.getElementById('notifPermHelp');
+          if (help) help.style.display = p === 'denied' ? '' : 'none';
+          const pb = document.getElementById('btnNotifPerm');
+          if (pb) pb.style.display = p === 'granted' ? 'none' : '';
+          const ns = document.getElementById('setNotifySystem');
+          if (ns) ns.checked = !!(s.notifySystem && p === 'granted');
         }
 
         const navShiftBtn = document.getElementById('navBtnShiftsTab');
@@ -4002,7 +4333,21 @@
             title: 'بازار: تجزیهٔ فید، ۲۲ عیار محاسبه‌ای، تبدیل ریال، رنگ صعود/نزول',
             out: MarketModule.selfTest().out,
             pass: MarketModule.selfTest().ok
-          }
+          },
+          (() => {
+            let r;
+            try {
+              const at = NotifyModule.atMs('1405/07/26', '09:30', 0);
+              const okAt = at === new Date(2026, 9, 18, 9, 30, 0, 0).getTime();
+              const enc = new TextEncoder();
+              const folded = IcsExport.fold('ب'.repeat(120)).split('\r\n').every(l => enc.encode(l).length <= 75);
+              const ics = IcsExport.build();
+              const okIcs = ics.text.indexOf('BEGIN:VCALENDAR') === 0 && ics.text.trim().slice(-13) === 'END:VCALENDAR' &&
+                (ics.text.match(/BEGIN:VEVENT/g) || []).length === (ics.text.match(/END:VEVENT/g) || []).length;
+              r = { ok: okAt && folded && okIcs, out: `زمان‌بندی=${okAt} | تا‌کردن خطوط=${folded} | ICS=${okIcs} (${ics.count} مورد)` };
+            } catch (e) { r = { ok: false, out: String(e) }; }
+            return { title: 'اعلان‌ها (v4.9): زمان‌بندی دقیق، آلارم تقویم و ساختار ICS', out: r.out, pass: r.ok };
+          })()
         ];
         document.getElementById('selfTestTableBody').innerHTML = tests.map((t, i) => `
           <tr>
@@ -4066,6 +4411,7 @@
 
         function closeOnboardingWithMotion() {
           SafeStorage.set(ONBOARD_KEY, true);
+          setTimeout(() => { if (typeof maybeAskNotify === 'function') maybeAskNotify(); }, 700);
           if (!onboardModal.classList.contains('open')) return;
           onboardModal.classList.add('closing');
           setTimeout(() => {
@@ -4590,7 +4936,7 @@
             AppState.settings[k] = v;
             SafeStorage.set(SETTINGS_KEY, AppState.settings);
             applySettings();
-            if (k === 'notifySystem') requestSystemNotify();
+            if (k === 'notifySystem') enableSystemNotifications();
             toast('✓ ذخیره شد');
           });
         });
@@ -4619,8 +4965,10 @@
           const p = document.getElementById('notifPanel');
           if (e.key === 'Escape' && p.classList.contains('open')) { NotifyModule.toggle(false); document.getElementById('btnNotifBell').focus(); }
         });
-        document.getElementById('btnTestNotify').addEventListener('click', () => {
-          if (!NotifyModule.sendSystem()) { toast('🔔 ' + (NotifyModule.summaryText().split('\n')[0] || 'اعلان نمونه')); NotifyModule.toggle(true); }
+        document.getElementById('btnTestNotify').addEventListener('click', async () => {
+          if (NotifyModule.perm() !== 'granted') { toast('ابتدا اجازهٔ اعلان را بدهید'); return; }
+          const r = await NotifyModule.show('🔔 اعلان آزمایشی', (NotifyModule.summaryText().split('\n')[0]) || 'اعلان‌ها درست کار می‌کنند', { tag: 'test', view: 'view-calendar' });
+          toast(r.ok ? 'اعلان فرستاده شد. اگر نمی‌بینید، تنظیمات اعلان گوشی را بررسی کنید' : 'ارسال نشد: ' + r.error);
         });
 
         // Backup & reset
@@ -4644,13 +4992,53 @@
         document.getElementById('btnRunWizard').addEventListener('click', () => document.getElementById('btnOpenQuickWizard').click());
         document.getElementById('formQuickNote').addEventListener('submit', () => setTimeout(() => { const d = document.getElementById('qnDetails'); if (d) d.open = false; }, 60));
 
+        // v4.9: notification permission, calendar export, service-worker messages
+        if (/[?&]test=1/.test(location.search)) window.__EMP__ = { NotifyModule, NotesModule, JalaliEngine, Fmt, IcsExport, FinanceModule, AppState };
+        {
+          const s = AppState.settings;
+          if (!s.notifyMigrated49) {
+            s.notifyMigrated49 = true;
+            if (NotifyModule.perm() === 'granted') s.notifySystem = true;
+            SafeStorage.set(SETTINGS_KEY, s);
+            applySettings();
+          }
+        }
+        document.getElementById('btnNotifPerm').addEventListener('click', () => {
+          AppState.settings.notifySystem = true;
+          enableSystemNotifications();
+        });
+        document.getElementById('btnExportIcs').addEventListener('click', () => IcsExport.download());
+        document.getElementById('btnNotifAskYes').addEventListener('click', async () => {
+          const s = AppState.settings, card = document.getElementById('notifAsk');
+          s.notifyAsked = true;
+          card.classList.remove('show'); setTimeout(() => { card.hidden = true; }, 250);
+          if (isIosNotInstalled()) { SafeStorage.set(SETTINGS_KEY, s); return; }
+          s.notifySystem = true;
+          SafeStorage.set(SETTINGS_KEY, s);
+          await enableSystemNotifications();
+        });
+        document.getElementById('btnNotifAskLater').addEventListener('click', () => {
+          const card = document.getElementById('notifAsk');
+          AppState.settings.notifyAsked = true;
+          SafeStorage.set(SETTINGS_KEY, AppState.settings);
+          card.classList.remove('show'); setTimeout(() => { card.hidden = true; }, 250);
+        });
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.addEventListener('message', e => {
+            if (e.data && e.data.type === 'open-view' && e.data.view && document.getElementById(e.data.view)) switchView(e.data.view);
+          });
+        }
+        if (/^#view-/.test(location.hash) && document.getElementById(location.hash.slice(1))) switchView(location.hash.slice(1));
+        if (AppState.settings.notifySystem && NotifyModule.perm() === 'granted') NotifyModule.registerPeriodic();
+        setTimeout(maybeAskNotify, 1800);
+
         // Timers: system notification, auto theme, midnight rollover
         NotifyModule.refresh();
         NotifyModule.tick();
         setInterval(() => {
           NotifyModule.tick();
           if (AppState.settings.themeMode === 'time' || AppState.settings.themeMode === 'system') applySettings();
-        }, 60000);
+        }, 30000);
         if (window.matchMedia) {
           const mq = window.matchMedia('(prefers-color-scheme: dark)');
           const h = () => { if (AppState.settings.themeMode === 'system') applySettings(); };
@@ -4663,6 +5051,7 @@
           if (freshTodayKey() !== TODAY_KEY && !typing && !InlinePicker.isOpen()) { location.reload(); return; }
           NotifyModule.refresh();
           applySettings();
+          NotifyModule.tick();
         });
         setTimeout(() => {
           const n = NotifyModule.items.filter(i => !i.base).length;
