@@ -1,8 +1,0 @@
-# File: supabase/config.toml | فقط برای دیپلوی توابع با Supabase CLI
-project_id = "emp-desk"
-
-[functions.tg-auth]
-verify_jwt = false   # امنیت با challenge/verifier است، نه با JWT؛ هم کلید anon و هم publishable کار می‌کند
-
-[functions.tg-webhook]
-verify_jwt = false   # تلگرام توکن Supabase ندارد؛ به‌جایش با secret_token اعتبارسنجی می‌شود
