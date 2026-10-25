@@ -1,0 +1,67 @@
+/* File: auth.css | Version: 1.0.0 | Date: 2026-10-25
+   ظاهر صفحهٔ ورود؛ از همان متغیرهای رنگ و فونت برنامه استفاده می‌کند (حالت روشن/تاریک خودکار). */
+[hidden] { display: none !important; }
+html.auth-pending body > :not(#authRoot) { display: none !important; }
+
+#authRoot, .au-backdrop {
+  position: fixed; inset: 0; z-index: 4000; overflow-y: auto;
+  background: var(--bg-app); color: var(--text-primary);
+  font-family: var(--app-font, 'Vazirmatn', system-ui, Tahoma, sans-serif);
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.au-backdrop { background: rgba(15,23,42,.55); backdrop-filter: blur(4px); align-items: center; z-index: 3900; }
+.au-wrap { width: 100%; max-width: 420px; margin: auto; }
+.au-card, .au-sheet {
+  background: var(--bg-surface); border: 1px solid var(--border-color);
+  border-radius: 20px; padding: 22px 20px; box-shadow: var(--shadow-md);
+}
+.au-sheet { width: 100%; max-width: 420px; max-height: 92vh; overflow-y: auto; }
+.au-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.au-brand img { border-radius: 14px; }
+.au-brand-t { font-weight: 800; font-size: 1rem; }
+.au-brand-s { font-size: .74rem; color: var(--text-muted); }
+.au-h { font-size: 1.15rem; font-weight: 800; margin-bottom: 4px; }
+.au-p { font-size: .85rem; color: var(--text-muted); margin-bottom: 14px; }
+.au-l { display: block; font-size: .8rem; font-weight: 700; color: var(--text-secondary); margin: 10px 0 5px; }
+.au-ltr { direction: ltr; text-align: left; }
+.au-block { width: 100%; padding: 12px 14px; font-size: .95rem; margin-top: 14px; }
+.au-pw { display: flex; gap: 6px; align-items: center; }
+.au-code { text-align: center; font-size: 1.6rem; letter-spacing: .45em; font-weight: 800; padding: 12px 8px; direction: ltr; }
+.au-link {
+  font-family: inherit; background: none; border: 0; color: var(--primary-text);
+  font-size: .82rem; font-weight: 700; cursor: pointer; padding: 8px 4px;
+}
+.au-link:disabled { color: var(--text-muted); cursor: default; }
+.au-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.au-msg {
+  font-size: .82rem; font-weight: 700; border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 12px;
+  background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);
+}
+.au-msg.ok { background: var(--success-soft); color: var(--success); border-color: var(--success); }
+.au-or { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; color: var(--text-muted); font-size: .76rem; }
+.au-or::before, .au-or::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+.au-social { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.au-social .btn { padding: 10px 8px; font-size: .84rem; }
+.au-ico {
+  width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.au-meter { height: 5px; border-radius: 99px; background: var(--bg-hover); margin-top: 8px; overflow: hidden; }
+.au-meter > i { display: block; height: 100%; width: 0; background: var(--danger); transition: width .2s, background .2s; }
+.au-sub { font-size: .76rem; color: var(--text-muted); margin-top: 4px; }
+.au-wait { text-align: center; padding: 8px 0 2px; }
+.au-spin {
+  width: 34px; height: 34px; margin: 6px auto 12px; border-radius: 50%;
+  border: 4px solid var(--primary-soft); border-top-color: var(--primary); animation: au-r 0.9s linear infinite;
+}
+@keyframes au-r { to { transform: rotate(360deg); } }
+.au-sheet-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.au-who { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.au-av {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;
+}
+.au-list { display: flex; flex-direction: column; gap: 0; }
+.au-list .au-block { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .au-spin { animation-duration: 3s; } }

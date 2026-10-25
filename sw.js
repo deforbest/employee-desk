@@ -1,11 +1,20 @@
-// File: sw.js | Version: 1.2.0-AuthCloud-Ready | Date: 2026-10-25
-// سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها  ۴) عبور مستقیم درخواست‌های ابری و بازار
+// File: sw.js | Version: 1.2.0 | Date: 2026-10-25
+// سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها (در صورت پشتیبانی مرورگر)
+// قیمت‌های بازار هرگز ذخیره نمی‌شوند و همیشه مستقیم از اینترنت می‌آیند.
 const CACHE = 'emp-desk-v5.0.0';
 const DIGEST_CACHE = 'emp-digest-v49';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
+// فایل‌های ورود/ثبت‌نام؛ اگر یکی در دسترس نبود نصب سرویس‌ورکر خراب نشود
+const AUTH_ASSETS = ['./auth.js', './auth.css', './config.js', './vendor/supabase.js'];
+// این‌ها همیشه اول از اینترنت گرفته می‌شوند (تا تغییر تنظیمات/کلیدها کهنه نماند) و فقط آفلاین از حافظه می‌آیند
+const FRESH_FIRST = /\/(auth\.js|auth\.css|config\.js)$/;
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(ASSETS).then(() => Promise.allSettled(AUTH_ASSETS.map(a => c.add(a)))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -20,7 +29,7 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) return; // بازار، فونت و ... مستقیم از اینترنت
 
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -32,6 +41,15 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
+  if (FRESH_FIRST.test(url.pathname)) {
+    event.respondWith(
+      fetch(req).then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(req).then(hit => hit || fetch(req).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
@@ -40,6 +58,7 @@ self.addEventListener('fetch', event => {
   );
 });
 
+// لمس اعلان: برنامه را باز می‌کند و به بخش مربوط می‌رود
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const view = (event.notification.data && event.notification.data.view) || '';
@@ -56,6 +75,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
+// بیدار شدن دوره‌ای (فقط اندروید/Chrome برای برنامهٔ نصب‌شده؛ زمانش را مرورگر تعیین می‌کند)
 self.addEventListener('periodicsync', event => {
   if (event.tag === 'emp-digest') event.waitUntil(runDigest());
 });
