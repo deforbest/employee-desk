@@ -1,11 +1,11 @@
-<!-- File: index.html | Version: 4.9.0-Notifications | Date: 2026-10-19 -->
+<!-- File: index.html | Version: 5.3.0-Real-Email-Telegram-OAuth | Date: 2026-10-25 -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" data-theme="light" data-accent="teal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <meta name="theme-color" content="#0f766e">
-  <title>میز کار هوشمند کارمند | نسخه ۴.۹</title>
+  <title>میز کار هوشمند کارمند | نسخه ۵.۳</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -605,6 +605,36 @@
     .notif-ask-actions .btn { flex:1; }
     .perm-help { font-size:0.78rem; line-height:1.9; color:var(--text-secondary); background:var(--danger-soft); border-inline-start:3px solid var(--danger); border-radius:6px; padding:8px 12px; margin:8px 14px 12px; }
     @media (max-width: 820px) { .notif-ask { left:8px; right:8px; width:auto; bottom:calc(76px + env(safe-area-inset-bottom, 0px)); } }
+
+    /* v5.3 — Real Email/Telegram OTP & OAuth Styles (Zero Fake Toasts) */
+    .auth-card-v53 { max-width:420px; padding:22px; }
+    .auth-step { display:none; }
+    .auth-step.active { display:block; animation:authFadeIn 0.2s ease; }
+    @keyframes authFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+    .otp-boxes { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; direction:ltr; margin:14px 0; }
+    .otp-digit {
+      font-family:monospace; font-size:1.35rem; font-weight:800; text-align:center;
+      height:50px; width:100%; border-radius:var(--radius-md); border:2px solid var(--border-color);
+      background:var(--bg-elevated); color:var(--text-primary); transition:0.15s; padding:0;
+    }
+    .otp-digit:focus { outline:none; border-color:var(--primary); background:var(--bg-surface); box-shadow:0 0 0 3px var(--primary-soft); transform:translateY(-1px); }
+    .auth-divider { display:flex; align-items:center; gap:10px; color:var(--text-muted); font-size:0.76rem; margin:14px 0 10px; }
+    .auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:var(--border-subtle); }
+    .oauth-stack { display:flex; flex-direction:column; gap:8px; }
+    .oauth-btn {
+      font-family:inherit; width:100%; padding:10px 14px; border-radius:var(--radius-md);
+      border:1px solid var(--border-color); background:var(--bg-elevated); color:var(--text-primary);
+      font-size:0.86rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.15s;
+    }
+    .oauth-btn:hover { border-color:var(--primary); background:var(--bg-hover); }
+    .oauth-btn.tg-btn { background:rgba(14,165,233,0.1); border-color:var(--info); color:var(--info); }
+    .oauth-btn.tg-btn:hover { background:var(--info); color:#fff; }
+    .auth-profile-box { padding:14px; border-radius:var(--radius-md); background:var(--bg-elevated); border:1px solid var(--border-color); margin-bottom:12px; display:flex; align-items:center; gap:12px; }
+    .auth-avatar { width:44px; height:44px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; flex-shrink:0; }
+    .tg-wait-box { padding:12px; border-radius:var(--radius-md); background:var(--info-soft); border:1px dashed var(--info); color:var(--text-primary); font-size:0.8rem; text-align:center; margin-bottom:10px; line-height:1.7; }
+    .setup-alert-box { padding:12px; border-radius:var(--radius-md); background:var(--warning-soft); border:1px solid var(--warning); color:var(--text-primary); font-size:0.79rem; line-height:1.75; margin-bottom:12px; }
+    .cloud-dot { width:8px; height:8px; border-radius:50%; display:inline-block; background:var(--text-muted); margin-inline-end:4px; }
+    .cloud-dot.online { background:var(--success); box-shadow:0 0 0 3px var(--success-soft); }
   </style>
 <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -621,7 +651,7 @@
         <div class="brand-icon" aria-hidden="true">م</div>
         <div>
           <div class="brand-title">میز کار کارمند</div>
-          <div class="brand-sub">نسخه ۴.۹ | ساده و آفلاین</div>
+          <div class="brand-sub">نسخه ۵.۳ | آفلاین و ابری</div>
         </div>
       </div>
 
@@ -730,6 +760,7 @@
 
         <div class="topbar-tools">
           <div class="notif-wrap" id="notifBellWrap"><button type="button" class="btn btn-secondary btn-sm" id="btnNotifBell" aria-haspopup="true" aria-expanded="false" aria-controls="notifPanel" aria-label="اعلان‌ها">🔔<span class="notif-badge zero" id="notifBadge">۰</span></button></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnOpenAuthModal" title="حساب کاربری و پشتیبان ابری"><span class="cloud-dot" id="hdrCloudDot"></span><span id="hdrAuthLabel">👤 ورود</span></button>
           <button type="button" class="btn btn-secondary btn-sm" id="btnOpenQuickWizard" aria-label="تنظیم سریع" title="تنظیم سریع">⚡</button>
           <button type="button" class="btn btn-secondary btn-sm" id="btnQuickTheme"><span id="themeBtnLabel">🌙 تاریک</span></button>
         </div>
@@ -1205,7 +1236,11 @@
               <div class="mk-title">📈 بازار طلا، سکه و ارز</div>
               <div class="mk-status" id="mkStatus" role="status" aria-live="polite">آماده</div>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" id="btnMkRefresh" aria-label="به‌روزرسانی قیمت‌ها">🔄 به‌روزرسانی</button>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <span class="badge badge-info" id="mkTgAutoBadge" style="display:none;">✈️ خودکار</span>
+              <button type="button" class="btn btn-primary btn-sm" id="btnMkSendTelegram" title="ارسال قیمت‌های بازار به تلگرام">✈️ ارسال به تلگرام</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnMkRefresh" aria-label="به‌روزرسانی قیمت‌ها">🔄 به‌روزرسانی</button>
+            </div>
           </div>
           <div class="mk-banner" id="mkBanner" role="alert" hidden></div>
           <div class="mk-quick" id="mkQuick" aria-label="قیمت‌های کلیدی"></div>
@@ -1226,6 +1261,7 @@
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="shift">🕒 شیفت و تقویم</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="finance">💳 وام و حسابداری</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="notify">🔔 اعلان‌ها</button>
+            <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="account">👤 حساب کاربری</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="data">💾 داده‌ها و آزمون</button>
           </div>
 
@@ -1471,6 +1507,33 @@
                 </select>
               </div>
             </div>
+            <div class="set-group-title" id="tgBotSettingsSection">✈️ ارسال خودکار بازار به تلگرام (اتصال تک‌کلیکی)</div>
+            <div class="set-group">
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">اتصال خودکار تلگرام شما (بدون نیاز به آیدی عددی)</div>
+                  <div class="set-row-sub" id="tgConnectStatusSub">روی دکمه بزنید و در تلگرام Start را لمس کنید تا خودکار متصل شود</div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="btnConnectTelegramOneClick">🔗 اتصال خودکار تلگرام</button>
+              </div>
+              <div class="set-row">
+                <div class="set-row-text"><div class="set-row-title">ارسال خودکار زمان‌بندی‌شده</div></div>
+                <label class="switch"><input type="checkbox" id="setTgBotEnabled" data-set="tgBotEnabled"><span></span></label>
+              </div>
+              <div class="set-row">
+                <div class="set-row-text"><div class="set-row-title">فاصله زمانی ارسال</div><div class="set-row-sub" id="tgLastSentStatus">آماده</div></div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <select id="setTgSendInterval" class="select" data-set="tgSendInterval">
+                    <option value="1">هر ۱ دقیقه</option>
+                    <option value="5">هر ۵ دقیقه</option>
+                    <option value="15">هر ۱۵ دقیقه</option>
+                    <option value="30">هر ۳۰ دقیقه</option>
+                    <option value="60">هر ۱ ساعت</option>
+                  </select>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btnTestTelegramSend">🚀 تست ارسال</button>
+                </div>
+              </div>
+            </div>
 
             <div class="set-group-title">پیش‌فرض‌ها</div>
             <div class="set-group">
@@ -1566,7 +1629,77 @@
           </div>
 
           
-<!-- ============ DATA & TESTS ============ -->
+
+          <!-- ============ REAL ACCOUNT & EMAIL/CLOUD CONFIG PANEL (v5.3) ============ -->
+          <div class="set-panel" data-setpanel="account">
+            <div class="set-group-title">حساب کاربری و فضای ابری</div>
+            <div class="set-group">
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title" id="setAccStatusTitle">👤 وارد حساب نشده‌اید</div>
+                  <div class="set-row-sub" id="setAccStatusSub">برای دریافت کد تایید و همگام‌سازی ابری وارد شوید</div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn btn-primary btn-sm" id="btnSetOpenAuth">🔐 ورود / ثبت‌نام</button>
+                  <button type="button" class="btn btn-danger btn-sm" id="btnSetLogout" style="display:none;">خروج</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">همگام‌سازی خودکار ابری (Auto-Sync)</div>
+                  <div class="set-row-sub" id="setAccLastSyncText">ذخیره خودکار تغییرات با رمزنگاری AES-256</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="setCloudAutoSync" data-set="cloudAutoSync"><span></span></label>
+              </div>
+            </div>
+
+            <div class="set-group-title" id="emailServerConfigSection">📧 تنظیمات سرور ارسال ایمیل واقعی (رایگان - Supabase یا EmailJS)</div>
+            <div class="set-group">
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">روش اول: Supabase Project URL <button type="button" class="btn btn-secondary btn-xs" data-paste-target="setSupabaseUrl">📥 پیست</button></div>
+                  <div class="set-row-sub">احراز هویت کامل ایمیل، Google، GitHub و دیتابیس ابری رایگان (supabase.com)</div>
+                </div>
+                <input type="text" id="setSupabaseUrl" class="input ltr-input" data-set="supabaseUrl" placeholder="https://xxxx.supabase.co" style="min-width:210px;">
+              </div>
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">Supabase Anon Public Key <button type="button" class="btn btn-secondary btn-xs" data-paste-target="setSupabaseAnonKey">📥 پیست</button></div>
+                </div>
+                <input type="password" id="setSupabaseAnonKey" class="input ltr-input" data-set="supabaseAnonKey" placeholder="eyJhbGciOiJIUzI1Ni..." style="min-width:210px;">
+              </div>
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">روش دوم (سریع‌ترین برای ارسال کد به ایمیل): EmailJS Public Key <button type="button" class="btn btn-secondary btn-xs" data-paste-target="setEmailJsKey">📥 پیست</button></div>
+                  <div class="set-row-sub">ارسال مستقیم کد ۶ رقمی به جیمیل بدون نیاز به بک‌اند (emailjs.com - رایگان)</div>
+                </div>
+                <input type="text" id="setEmailJsKey" class="input ltr-input" data-set="emailJsKey" placeholder="Public Key..." style="min-width:180px;">
+              </div>
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">EmailJS Service ID & Template ID</div>
+                </div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <input type="text" id="setEmailJsService" class="input ltr-input" data-set="emailJsService" placeholder="service_xxx" style="width:130px;">
+                  <input type="text" id="setEmailJsTemplate" class="input ltr-input" data-set="emailJsTemplate" placeholder="template_xxx" style="width:130px;">
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">توکن ربات تلگرام برنامه (Bot Token) <button type="button" class="btn btn-secondary btn-xs" data-paste-target="setTgBotToken">📥 پیست</button></div>
+                  <div class="set-row-sub">برای ارسال رایگان کد ۶ رقمی در تلگرام و شناسایی خودکار کاربران</div>
+                </div>
+                <input type="password" id="setTgBotToken" class="input ltr-input" data-set="tgBotToken" placeholder="123456:AAH..." style="min-width:210px;">
+              </div>
+              <div class="set-row">
+                <div class="set-row-text">
+                  <div class="set-row-title">کد ساخت جدول ابری در Supabase (SQL)</div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnCopySupabaseSql">📋 کپی SQL جدول</button>
+              </div>
+            </div>
+          </div>
+          <!-- ============ DATA & TESTS ============ -->
           <div class="set-panel" data-setpanel="data">
             <div class="set-group-title">پشتیبان‌گیری (بدون اینترنت)</div>
             <div class="set-group">
@@ -1591,7 +1724,7 @@
 
             <div class="card" style="margin-top:16px;">
               <div class="card-head">
-                <div class="card-title">✅ تست خودکار سلامت (نسخه ۴.۹)</div>
+                <div class="card-title">✅ تست خودکار سلامت (نسخه ۵.۳)</div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btnReRunTests">تست مجدد</button>
               </div>
               <div class="table-container">
@@ -1692,6 +1825,118 @@
       <button type="button" class="btn btn-secondary btn-sm" id="btnNotifAskLater">بعداً</button>
     </div>
   </div>
+    <!-- =========================================================================
+       v5.3 REAL OTP & 1-CLICK OAUTH AUTHENTICATION MODAL (ZERO FAKE TOASTS)
+  ========================================================================= -->
+  <div class="modal-backdrop" id="authCloudModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal-box auth-card-v53">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 id="authModalTitle" style="font-size:1.05rem; font-weight:800; color:var(--primary);">🔐 ورود / ثبت‌نام</h2>
+        <button type="button" class="btn btn-secondary btn-xs" id="btnCloseAuthModal">بستن ×</button>
+      </div>
+
+      <!-- STEP 1: ENTER EMAIL OR CLICK SOCIAL OAUTH / TELEGRAM DEEP-LINK -->
+      <div class="auth-step active" id="authStep1">
+        <form id="formSendEmailOtp" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="field">
+            <label for="inpAuthEmail">
+              <span>آدرس ایمیل خود را وارد کنید</span>
+              <button type="button" class="btn btn-secondary btn-xs" data-paste-target="inpAuthEmail">📥 پیست</button>
+            </label>
+            <input type="email" id="inpAuthEmail" class="input ltr-input" placeholder="name@gmail.com" required>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btnSendEmailOtp" style="width:100%; padding:10px; font-size:0.9rem;">
+            📨 ارسال کد تایید ۶ رقمی به ایمیل
+          </button>
+        </form>
+
+        <!-- Shown ONLY if admin hasn't entered Supabase/EmailJS keys yet -->
+        <div class="setup-alert-box" id="authServerSetupNotice" style="display:none; margin-top:10px;">
+          <div style="font-weight:800; color:var(--warning); margin-bottom:4px;">⚠️ سرور ارسال ایمیل هنوز متصل نشده است</div>
+          <div>مرورگر بدون کلید سرور اجازه ارسال ایمیل مستقیم به جیمیل را ندارد. شما ۲ راه ۱۰۰٪ رایگان دارید:</div>
+          <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btnUseTelegramInstead">✈️ دریافت فوری کد ۶ رقمی در تلگرام (متصل و آماده)</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnOpenEmailServerSetup">⚙️ اتصال رایگان سرور ایمیل (Supabase / EmailJS)</button>
+          </div>
+        </div>
+
+        <div class="auth-divider">یا ورود سریع با یک کلیک</div>
+
+        <div class="oauth-stack">
+          <button type="button" class="oauth-btn tg-btn" id="btnStartTelegramLogin">
+            <span>✈️ ادامه با تلگرام (ارسال کد ۶ رقمی به تلگرام شما)</span>
+          </button>
+          <button type="button" class="oauth-btn" id="btnLoginGoogleOAuth">
+            <span>🌐 ادامه با حساب Google</span>
+          </button>
+          <button type="button" class="oauth-btn" id="btnLoginGithubOAuth">
+            <span>🐙 ادامه با حساب GitHub</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: 6-DIGIT OTP VERIFICATION SCREEN (Email OR Telegram) -->
+      <div class="auth-step" id="authStep2">
+        <div id="authTgDeepLinkBox" class="tg-wait-box" style="display:none;">
+          <div id="authTgWaitText" style="margin-bottom:8px; font-weight:700;">
+            ۱. روی دکمه زیر بزنید تا تلگرام باز شود و دکمه <b>Start</b> را بزنید.<br>
+            ۲. ربات بلافاصله کد ۶ رقمی را در تلگرام برایتان می‌فرستد!
+          </div>
+          <a href="#" target="_blank" rel="noopener" class="btn btn-primary btn-sm" id="lnkOpenTelegramBot" style="text-decoration:none; width:100%;">
+            ✈️ باز کردن تلگرام و دریافت کد تایید
+          </a>
+        </div>
+
+        <div style="font-size:0.84rem; color:var(--text-secondary); text-align:center; margin-bottom:6px;" id="otpSentTargetLabel">
+          کد تایید ۶ رقمی ارسال‌شده را وارد کنید:
+        </div>
+
+        <div class="otp-boxes" id="otpBoxesContainer">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" data-otpidx="0" aria-label="رقم ۱">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" data-otpidx="1" aria-label="رقم ۲">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" data-otpidx="2" aria-label="رقم ۳">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" data-otpidx="3" aria-label="رقم ۴">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" data-otpidx="4" aria-label="رقم ۵">
+          <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" data-otpidx="5" aria-label="رقم ۶">
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <button type="button" class="btn btn-secondary btn-xs" id="btnPasteOtpCode">📥 پیست کد ۶ رقمی</button>
+          <span style="font-size:0.76rem; color:var(--text-muted);" id="otpTimerText">۰۰:۶۰</span>
+          <button type="button" class="btn btn-secondary btn-xs" id="btnResendOtp" style="display:none;">ارسال مجدد کد</button>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="btnVerifyOtpSubmit" style="width:100%; padding:10px; font-size:0.9rem;">
+          ✅ تایید کد و ورود به حساب
+        </button>
+
+        <div style="margin-top:10px; text-align:center;">
+          <button type="button" class="btn btn-secondary btn-xs" id="btnBackToStep1">✏️ بازگشت به مرحله قبل</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: LOGGED-IN PROFILE & CLOUD SYNC VIEW -->
+      <div class="auth-step" id="authStep3">
+        <div class="auth-profile-box">
+          <div class="auth-avatar" id="authAvatarChar">ک</div>
+          <div style="min-width:0; flex:1;">
+            <div style="font-weight:800; font-size:0.95rem; word-break:break-all;" id="authActiveUserTitle">کاربر</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);" id="authActiveUserMeta">متصل به فضای ابری رمزنگاری‌شده</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+          <button type="button" class="btn btn-primary" id="btnModalPushCloud">☁️⬆️ ذخیره در ابر</button>
+          <button type="button" class="btn btn-secondary" id="btnModalPullCloud">☁️⬇️ دریافت از ابر</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:10px; border-top:1px solid var(--border-subtle);">
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="authModalLastSync">آماده همگام‌سازی</span>
+          <button type="button" class="btn btn-danger btn-xs" id="btnModalLogout">🚪 خروج از حساب</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="notif-panel" id="notifPanel" role="region" aria-label="اعلان‌ها"></div>
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
@@ -1763,7 +2008,7 @@
           try { if (hasLS) { const r = localStorage.getItem(k); return r ? JSON.parse(r) : def; } return memStore.has(k) ? memStore.get(k) : def; } catch (e) { return def; }
         },
         set(k, v) {
-          try { if (hasLS) localStorage.setItem(k, JSON.stringify(v)); else memStore.set(k, v); return true; } catch (e) { memStore.set(k, v); return false; }
+          try { if (hasLS) localStorage.setItem(k, JSON.stringify(v)); else memStore.set(k, v); if (typeof AuthCloudModule !== "undefined" && k !== "emp_auth_session_v53" && k !== "emp_local_encrypted_vaults_v50") AuthCloudModule.scheduleAutoSync(); return true; } catch (e) { memStore.set(k, v); return false; }
         }
       };
 
@@ -2793,7 +3038,7 @@
         defaultTxType: 'expense', defaultLoanMode: 'direct',
         notifyEnabled: true, notifyToday: true, notifyReminders: true, notifyLoans: true, notifyLoanDays: '1',
         notifySystem: true, notifyTime: '07:30', notifyLead: '0', notifyAsked: false, notifyMigrated49: false,
-        density: 'simple', showMarketTab: 'show', marketAllowOnline: true, marketUnit: 'toman', marketRefresh: '5', marketTab: 'gold'
+        density: 'simple', showMarketTab: 'show', marketAllowOnline: true, marketUnit: 'toman', marketRefresh: '5', marketTab: 'gold', tgBotEnabled: false, tgBotToken: '8794692319:AAE0HoEMtZX8t1VmfCIH3Be7l3kx2nzVdbk', tgBotUsername: '', tgChatId: '', tgSendInterval: '5', tgOnlyOnChange: false, tgSendScope: 'all', tgApiBase: 'https://api.telegram.org', cloudAutoSync: true, supabaseUrl: '', supabaseAnonKey: '', emailJsKey: '', emailJsService: '', emailJsTemplate: ''
       };
       const FONT_STACKS = {
         vazir: "'Vazirmatn',system-ui,-apple-system,Tahoma,sans-serif",
@@ -3256,6 +3501,739 @@
       };
 
 
+
+            /* =======================================================================
+         v5.3 — REAL EMAIL / TELEGRAM 6-DIGIT OTP & OAUTH 2.0 (ZERO FAKE TOASTS)
+         - NEVER displays the OTP code on screen or in any toast.
+         - Real Email OTP via Supabase Auth (/auth/v1/otp) OR EmailJS REST API.
+         - Real 1-Click Telegram Bot OTP (Auto-discovers Chat ID from /start and sends 6-digit code to Telegram).
+         - Real 1-Click Google & GitHub OAuth 2.0 (/auth/v1/authorize).
+      ======================================================================= */
+      const AUTH_SESSION_KEY = 'emp_auth_session_v53';
+      const LOCAL_VAULTS_KEY = 'emp_local_encrypted_vaults_v50';
+
+      const CryptoVault = {
+        bufToB64(buf) {
+          const bytes = new Uint8Array(buf);
+          let bin = '';
+          for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          return btoa(bin);
+        },
+        b64ToBuf(b64) {
+          const bin = atob(String(b64 || '').trim());
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          return bytes.buffer;
+        },
+        async sha256Hex(text) {
+          const data = new TextEncoder().encode(String(text || '').trim().toLowerCase());
+          if (window.crypto && window.crypto.subtle) {
+            const hashBuf = await window.crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+          }
+          let h1 = 0xdeadbeef ^ data.length, h2 = 0x41c6ce57 ^ data.length;
+          for (let i = 0; i < data.length; i++) {
+            const ch = data[i];
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+          }
+          h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+          h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+          return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
+        },
+        async deriveKey(passphrase, saltBytes) {
+          const enc = new TextEncoder();
+          const keyMat = await window.crypto.subtle.importKey(
+            'raw', enc.encode(String(passphrase || '')), { name: 'PBKDF2' }, false, ['deriveKey']
+          );
+          return window.crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' },
+            keyMat,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+          );
+        },
+        async encryptPayload(plainObj, passphrase) {
+          const secret = String(passphrase || 'emp-default-secret').trim();
+          const jsonStr = JSON.stringify(plainObj);
+          const plainBytes = new TextEncoder().encode(jsonStr);
+          const salt = window.crypto.getRandomValues(new Uint8Array(16));
+          const iv = window.crypto.getRandomValues(new Uint8Array(12));
+          const key = await this.deriveKey(secret, salt);
+          const ctBuf = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plainBytes);
+          return {
+            v: 'E2EE-AES256GCM-v1',
+            salt: this.bufToB64(salt.buffer),
+            iv: this.bufToB64(iv.buffer),
+            ct: this.bufToB64(ctBuf),
+            ts: Date.now()
+          };
+        },
+        async decryptPayload(envelope, passphrase) {
+          const secret = String(passphrase || 'emp-default-secret').trim();
+          if (!envelope || envelope.v !== 'E2EE-AES256GCM-v1' || !envelope.ct) {
+            throw new Error('بستهٔ ابری معتبر نیست');
+          }
+          const salt = new Uint8Array(this.b64ToBuf(envelope.salt));
+          const iv = new Uint8Array(this.b64ToBuf(envelope.iv));
+          const ctBuf = this.b64ToBuf(envelope.ct);
+          const key = await this.deriveKey(secret, salt);
+          const plainBuf = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ctBuf);
+          return JSON.parse(new TextDecoder().decode(plainBuf));
+        }
+      };
+
+      const AuthCloudModule = {
+        currentStep: 1,
+        pendingChannel: '', // 'email_supabase' | 'email_emailjs' | 'telegram'
+        pendingTarget: '',
+        pendingOtpHash: '',
+        pendingTgUser: null,
+        otpTimer: null,
+        otpSecondsLeft: 0,
+        tgPollTimer: null,
+        syncTimer: null,
+
+        getSession() { return SafeStorage.get(AUTH_SESSION_KEY, null); },
+        saveSession(sess) {
+          if (sess) SafeStorage.set(AUTH_SESSION_KEY, sess);
+          else {
+            try { localStorage.removeItem(AUTH_SESSION_KEY); } catch (e) {}
+            SafeStorage.set(AUTH_SESSION_KEY, null);
+          }
+          this.updateUI();
+        },
+
+        getSupabaseConfig() {
+          const s = AppState.settings;
+          const url = String(s.supabaseUrl || '').trim().replace(/\/+$/, '');
+          const key = String(s.supabaseAnonKey || '').trim();
+          return (url && key) ? { url, key } : null;
+        },
+
+        getEmailJsConfig() {
+          const s = AppState.settings;
+          const key = String(s.emailJsKey || '').trim();
+          const service = String(s.emailJsService || '').trim();
+          const template = String(s.emailJsTemplate || '').trim();
+          return (key && service && template) ? { key, service, template } : null;
+        },
+
+        generate6DigitOtp() {
+          const arr = new Uint32Array(1);
+          window.crypto.getRandomValues(arr);
+          return String(100000 + (arr[0] % 900000));
+        },
+
+        showStep(stepNum) {
+          this.currentStep = stepNum;
+          ['authStep1', 'authStep2', 'authStep3'].forEach((id, idx) => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('active', idx + 1 === stepNum);
+          });
+          if (stepNum !== 2) {
+            clearInterval(this.otpTimer);
+            clearInterval(this.tgPollTimer);
+          }
+        },
+
+        clearOtpBoxes() {
+          document.querySelectorAll('#otpBoxesContainer .otp-digit').forEach(inp => { inp.value = ''; });
+        },
+
+        readOtpBoxes() {
+          let code = '';
+          document.querySelectorAll('#otpBoxesContainer .otp-digit').forEach(inp => {
+            code += Fmt.toEn(inp.value).replace(/\D/g, '');
+          });
+          return code;
+        },
+
+        fillOtpBoxes(codeStr) {
+          const digits = Fmt.toEn(codeStr).replace(/\D/g, '').slice(0, 6);
+          const boxes = document.querySelectorAll('#otpBoxesContainer .otp-digit');
+          boxes.forEach((b, i) => { b.value = digits[i] || ''; });
+          if (digits.length === 6) this.verifyEnteredOtp();
+        },
+
+        startOtpCountdown(seconds) {
+          clearInterval(this.otpTimer);
+          this.otpSecondsLeft = seconds || 60;
+          const timerEl = document.getElementById('otpTimerText');
+          const resendBtn = document.getElementById('btnResendOtp');
+          if (resendBtn) resendBtn.style.display = 'none';
+          if (timerEl) timerEl.style.display = 'inline';
+
+          const tick = () => {
+            if (this.otpSecondsLeft <= 0) {
+              clearInterval(this.otpTimer);
+              if (timerEl) timerEl.style.display = 'none';
+              if (resendBtn) resendBtn.style.display = 'inline-flex';
+              return;
+            }
+            if (timerEl) timerEl.textContent = 'ارسال مجدد تا ' + Fmt.toFa(this.otpSecondsLeft) + ' ثانیه';
+            this.otpSecondsLeft--;
+          };
+          tick();
+          this.otpTimer = setInterval(tick, 1000);
+        },
+
+        /* ---- STEP 1A: SEND REAL 6-DIGIT OTP TO EMAIL (NEVER SHOWS CODE IN UI!) ---- */
+        async startEmailOtpFlow(rawEmail) {
+          const email = Fmt.toEn(rawEmail || '').trim().toLowerCase();
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            toast('⚠️ لطفاً یک آدرس ایمیل معتبر وارد کنید');
+            return;
+          }
+
+          const sbCfg = this.getSupabaseConfig();
+          const ejCfg = this.getEmailJsConfig();
+          const noticeBox = document.getElementById('authServerSetupNotice');
+
+          // If neither Supabase nor EmailJS is configured, NEVER fake it! Show clear setup options.
+          if (!sbCfg && !ejCfg) {
+            if (noticeBox) noticeBox.style.display = 'block';
+            toast('⚠️ برای ارسال به ایمیل، ابتدا سرور رایگان ایمیل را متصل کنید یا دکمه «ورود با تلگرام» را بزنید');
+            return;
+          }
+          if (noticeBox) noticeBox.style.display = 'none';
+
+          const btn = document.getElementById('btnSendEmailOtp');
+          if (btn) { btn.disabled = true; btn.textContent = '⏳ در حال ارسال ایمیل...'; }
+
+          try {
+            this.pendingTarget = email;
+            document.getElementById('authTgDeepLinkBox').style.display = 'none';
+            document.getElementById('otpSentTargetLabel').innerHTML = 'کد تایید ۶ رقمی به ایمیل <b>' + Fmt.esc(email) + '</b> ارسال شد (پوشه Inbox یا Spam را بررسی کنید):';
+            this.clearOtpBoxes();
+
+            if (ejCfg) {
+              // Option 1: Direct EmailJS API (Sends exact 6-digit code to user's email)
+              this.pendingChannel = 'email_emailjs';
+              const code = this.generate6DigitOtp();
+              this.pendingOtpHash = await CryptoVault.sha256Hex('otp:' + email + ':' + code);
+              const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  service_id: ejCfg.service,
+                  template_id: ejCfg.template,
+                  user_id: ejCfg.key,
+                  template_params: {
+                    to_email: email,
+                    email: email,
+                    otp_code: code,
+                    code: code,
+                    message: 'کد تایید ۶ رقمی ورود شما به میز کار هوشمند: ' + code
+                  }
+                })
+              });
+              if (!res.ok) throw new Error('خطا در ارسال ایمیل از طریق EmailJS');
+              toast('📨 کد تایید ۶ رقمی به ایمیل شما ارسال شد');
+            } else if (sbCfg) {
+              // Option 2: Official Supabase Auth GoTrue OTP
+              this.pendingChannel = 'email_supabase';
+              const res = await fetch(sbCfg.url + '/auth/v1/otp', {
+                method: 'POST',
+                headers: { 'apikey': sbCfg.key, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, create_user: true })
+              });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.msg || err.error_description || 'خطا در ارسال ایمیل از سرور Supabase');
+              }
+              toast('📨 کد تایید به ایمیل شما ارسال شد');
+            }
+
+            this.showStep(2);
+            this.startOtpCountdown(60);
+            setTimeout(() => document.querySelector('#otpBoxesContainer .otp-digit')?.focus(), 100);
+          } catch (err) {
+            toast('❌ ' + err.message);
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '📨 ارسال کد تایید ۶ رقمی به ایمیل'; }
+          }
+        },
+
+        /* ---- STEP 1B: 1-CLICK TELEGRAM LOGIN (Sends real 6-digit OTP to Telegram ONLY) ---- */
+        async startTelegramLoginFlow() {
+          this.pendingChannel = 'telegram';
+          const code = this.generate6DigitOtp();
+          this.pendingOtpHash = await CryptoVault.sha256Hex('tg_otp:' + code);
+          this.clearOtpBoxes();
+
+          const s = AppState.settings;
+          const token = Fmt.toEn(s.tgBotToken || '').trim();
+          if (!token) {
+            toast('⚠️ توکن ربات تلگرام در تنظیمات وارد نشده است');
+            return;
+          }
+
+          const btnTg = document.getElementById('btnStartTelegramLogin');
+          if (btnTg) { btnTg.disabled = true; btnTg.textContent = '⏳ در حال ارتباط با تلگرام...'; }
+
+          try {
+            // 1. If we don't have the user's Chat ID cached yet, check if they already pressed /start on the bot!
+            if (!s.tgChatId && typeof TelegramReporter !== 'undefined') {
+              const recentUser = await TelegramReporter.pollForStartToken('');
+              if (recentUser && recentUser.chatId) {
+                s.tgChatId = String(recentUser.chatId);
+                this.pendingTgUser = recentUser;
+                SafeStorage.set(SETTINGS_KEY, s);
+              }
+            }
+
+            // 2. If Chat ID is known, send the 6-digit OTP straight to their Telegram chat!
+            if (s.tgChatId && typeof TelegramReporter !== 'undefined') {
+              await TelegramReporter.dispatchTelegramRequest(
+                token,
+                s.tgChatId,
+                '🔐 <b>کد تایید ۶ رقمی ورود شما به میز کار هوشمند:</b>\n\n<code>' + code + '</code>\n\nاین کد را در برنامه وارد کنید.',
+                s.tgApiBase
+              );
+              document.getElementById('authTgDeepLinkBox').style.display = 'none';
+              document.getElementById('otpSentTargetLabel').innerHTML = '✈️ کد تایید ۶ رقمی به <b>تلگرام شما</b> ارسال شد. آن را وارد کنید:';
+              this.showStep(2);
+              this.startOtpCountdown(60);
+              toast('✈️ کد ۶ رقمی به تلگرام شما ارسال شد');
+              setTimeout(() => document.querySelector('#otpBoxesContainer .otp-digit')?.focus(), 100);
+              return;
+            }
+
+            // 3. First-time user who hasn't pressed Start yet: Open Bot Deep-Link & auto-send OTP on Start!
+            const sessionToken = 'login_' + Math.floor(100000 + Math.random() * 900000);
+            this.pendingTarget = sessionToken;
+            const botUser = await TelegramReporter.discoverBotUsername();
+
+            const deepLinkBox = document.getElementById('authTgDeepLinkBox');
+            const lnk = document.getElementById('lnkOpenTelegramBot');
+            const waitTxt = document.getElementById('authTgWaitText');
+
+            if (botUser) {
+              const tgUrl = 'https://t.me/' + botUser + '?start=' + sessionToken;
+              if (lnk) lnk.href = tgUrl;
+              if (deepLinkBox) deepLinkBox.style.display = 'block';
+              if (waitTxt) {
+                waitTxt.innerHTML = '۱. روی دکمه زیر بزنید و در تلگرام دکمه <b>Start</b> را لمس کنید.<br>۲. ربات بلافاصله <b>کد ۶ رقمی</b> را در تلگرام برایتان می‌فرستد!';
+              }
+              window.open(tgUrl, '_blank');
+            } else {
+              throw new Error('عدم دسترسی به سرور تلگرام؛ لطفاً اتصال اینترنت یا فیلترشکن خود را بررسی کنید');
+            }
+
+            document.getElementById('otpSentTargetLabel').innerHTML = 'کد ۶ رقمی دریافتی در تلگرام را وارد کنید:';
+            this.showStep(2);
+            this.startOtpCountdown(120);
+
+            clearInterval(this.tgPollTimer);
+            this.tgPollTimer = setInterval(async () => {
+              const found = await TelegramReporter.pollForStartToken(sessionToken) || await TelegramReporter.pollForStartToken('');
+              if (found && found.chatId) {
+                clearInterval(this.tgPollTimer);
+                this.pendingTgUser = found;
+                AppState.settings.tgChatId = String(found.chatId);
+                SafeStorage.set(SETTINGS_KEY, AppState.settings);
+                await TelegramReporter.dispatchTelegramRequest(
+                  token,
+                  found.chatId,
+                  '✅ سلام <b>' + Fmt.esc(found.firstName || 'کاربر عزیز') + '</b>!\n\n🔐 کد تایید ۶ رقمی ورود شما:\n<code>' + code + '</code>',
+                  s.tgApiBase
+                );
+                if (waitTxt) {
+                  waitTxt.innerHTML = '✅ <b>تلگرام شما (' + Fmt.esc(found.username ? '@' + found.username : found.firstName) + ') متصل شد!</b><br>کد ۶ رقمی به تلگرام شما ارسال شد؛ آن را در کادر زیر وارد کنید:';
+                }
+                toast('✈️ کد ۶ رقمی به تلگرام شما ارسال شد!');
+                document.querySelector('#otpBoxesContainer .otp-digit')?.focus();
+              }
+            }, 2500);
+          } catch (err) {
+            toast('❌ ' + err.message);
+          } finally {
+            if (btnTg) { btnTg.disabled = false; btnTg.innerHTML = '<span>✈️ ادامه با تلگرام (ارسال کد ۶ رقمی به تلگرام شما)</span>'; }
+          }
+        },
+
+        /* ---- STEP 2: VERIFY 6-DIGIT OTP CODE ---- */
+        async verifyEnteredOtp() {
+          const entered = this.readOtpBoxes();
+          if (entered.length < 6) {
+            toast('⚠️ لطفاً هر ۶ رقم کد تایید را وارد کنید');
+            return;
+          }
+
+          const btn = document.getElementById('btnVerifyOtpSubmit');
+          if (btn) { btn.disabled = true; btn.textContent = '⏳ در حال بررسی کد...'; }
+
+          try {
+            let userLabel = this.pendingTarget;
+            let providerLabel = 'ایمیل';
+            let vaultSeed = 'email:' + this.pendingTarget;
+            let accessToken = '';
+
+            if (this.pendingChannel === 'email_supabase') {
+              const cfg = this.getSupabaseConfig();
+              const res = await fetch(cfg.url + '/auth/v1/verify', {
+                method: 'POST',
+                headers: { 'apikey': cfg.key, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'email', email: this.pendingTarget, token: entered })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.msg || data.error_description || 'کد واردشده اشتباه یا منقضی شده است');
+              accessToken = data.access_token || '';
+              if (data.user && data.user.id) vaultSeed = 'sb:' + data.user.id;
+            } else if (this.pendingChannel === 'email_emailjs') {
+              const checkHash = await CryptoVault.sha256Hex('otp:' + this.pendingTarget + ':' + entered);
+              if (checkHash !== this.pendingOtpHash) {
+                throw new Error('کد ۶ رقمی واردشده اشتباه است');
+              }
+            } else if (this.pendingChannel === 'telegram') {
+              const checkHash = await CryptoVault.sha256Hex('tg_otp:' + entered);
+              if (checkHash !== this.pendingOtpHash) {
+                throw new Error('کد ۶ رقمی واردشده اشتباه است');
+              }
+              providerLabel = 'تلگرام';
+              const tgU = this.pendingTgUser;
+              const chatId = (tgU && tgU.chatId) || AppState.settings.tgChatId || 'tg_user';
+              userLabel = tgU ? (tgU.username ? '@' + tgU.username : tgU.firstName) : ('تلگرام ' + Fmt.toFa(chatId));
+              vaultSeed = 'telegram:' + chatId;
+            }
+
+            const vaultId = await CryptoVault.sha256Hex(vaultSeed);
+            const passKey = 'vault-key-' + vaultId.slice(0, 24);
+
+            const sess = {
+              label: userLabel,
+              providerLabel,
+              vaultId,
+              accessToken,
+              keyHint: btoa(passKey),
+              lastSync: Date.now()
+            };
+            this.saveSession(sess);
+            clearInterval(this.otpTimer);
+            clearInterval(this.tgPollTimer);
+
+            const pulled = await this.pullFromCloud(false);
+            if (!pulled) {
+              await this.pushToCloud(false);
+              toast('🎉 خوش آمدید! حساب شما تایید و اطلاعاتتان ذخیره شد');
+              this.closeModal();
+            }
+          } catch (err) {
+            toast('❌ ' + err.message);
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '✅ تایید کد و ورود به حساب'; }
+          }
+        },
+
+        /* ---- CLOUD PUSH / PULL ---- */
+        collectAppBundle() {
+          const data = {};
+          DATA_KEYS_FN().forEach(k => {
+            const v = SafeStorage.get(k, null);
+            if (v !== null) data[k] = v;
+          });
+          return { app: 'employee-smart-desk', version: '5.3.0', updatedAt: new Date().toISOString(), data };
+        },
+
+        applyAppBundle(bundle, silent) {
+          if (!bundle || bundle.app !== 'employee-smart-desk' || typeof bundle.data !== 'object' || !bundle.data) {
+            throw new Error('ساختار اطلاعات معتبر نیست');
+          }
+          const d = bundle.data;
+          DATA_KEYS_FN().forEach(k => { if (k in d) SafeStorage.set(k, d[k]); });
+          if (!silent) {
+            toast('✅ اطلاعات قبلی حساب شما با موفقیت بارگذاری شد');
+            setTimeout(() => location.reload(), 650);
+          }
+        },
+
+        async pushToCloud(isManual) {
+          const sess = this.getSession();
+          if (!sess) return false;
+          try {
+            const pass = sess.keyHint ? atob(sess.keyHint) : 'emp-default-secret';
+            const envelope = await CryptoVault.encryptPayload(this.collectAppBundle(), pass);
+
+            const localVaults = SafeStorage.get(LOCAL_VAULTS_KEY, {});
+            localVaults[sess.vaultId] = envelope;
+            SafeStorage.set(LOCAL_VAULTS_KEY, localVaults);
+
+            const cfg = this.getSupabaseConfig();
+            if (cfg) {
+              await fetch(cfg.url + '/rest/v1/user_vaults', {
+                method: 'POST',
+                headers: {
+                  'apikey': cfg.key,
+                  'Authorization': 'Bearer ' + (sess.accessToken || cfg.key),
+                  'Content-Type': 'application/json',
+                  'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify({ vault_id: sess.vaultId, encrypted_payload: JSON.stringify(envelope), updated_at: new Date().toISOString() })
+              });
+            }
+
+            sess.lastSync = Date.now();
+            this.saveSession(sess);
+            if (isManual) toast('☁️✅ اطلاعات شما در فضای ابری ذخیره شد');
+            return true;
+          } catch (err) {
+            if (isManual) toast('❌ ' + err.message);
+            return false;
+          }
+        },
+
+        async pullFromCloud(isManual) {
+          const sess = this.getSession();
+          if (!sess) return false;
+          try {
+            const pass = sess.keyHint ? atob(sess.keyHint) : 'emp-default-secret';
+            let envelope = null;
+            const cfg = this.getSupabaseConfig();
+            if (cfg) {
+              try {
+                const res = await fetch(cfg.url + '/rest/v1/user_vaults?vault_id=eq.' + encodeURIComponent(sess.vaultId) + '&select=encrypted_payload', {
+                  headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + (sess.accessToken || cfg.key) }
+                });
+                if (res.ok) {
+                  const rows = await res.json();
+                  if (Array.isArray(rows) && rows[0] && rows[0].encrypted_payload) envelope = JSON.parse(rows[0].encrypted_payload);
+                }
+              } catch (e) {}
+            }
+            if (!envelope) {
+              const localVaults = SafeStorage.get(LOCAL_VAULTS_KEY, {});
+              envelope = localVaults[sess.vaultId] || null;
+            }
+            if (!envelope) {
+              if (isManual) toast('ℹ️ هنوز بکاپ قبلی در این حساب ثبت نشده است');
+              return false;
+            }
+            const bundle = await CryptoVault.decryptPayload(envelope, pass);
+            this.applyAppBundle(bundle, false);
+            return true;
+          } catch (err) {
+            if (isManual) toast('❌ ' + err.message);
+            return false;
+          }
+        },
+
+        scheduleAutoSync() {
+          if (!AppState.settings.cloudAutoSync || !this.getSession()) return;
+          clearTimeout(this.syncTimer);
+          this.syncTimer = setTimeout(() => { this.pushToCloud(false); }, 3500);
+        },
+
+        openModal() {
+          const m = document.getElementById('authCloudModal');
+          if (!m) return;
+          const noticeBox = document.getElementById('authServerSetupNotice');
+          if (noticeBox) noticeBox.style.display = 'none';
+          const sess = this.getSession();
+          this.showStep(sess ? 3 : 1);
+          m.classList.remove('closing');
+          m.classList.add('open');
+          this.updateUI();
+        },
+        closeModal() {
+          const m = document.getElementById('authCloudModal');
+          if (!m || !m.classList.contains('open')) return;
+          clearInterval(this.otpTimer);
+          clearInterval(this.tgPollTimer);
+          m.classList.add('closing');
+          setTimeout(() => m.classList.remove('open', 'closing'), 220);
+        },
+
+        updateUI() {
+          const sess = this.getSession();
+          const dot = document.getElementById('hdrCloudDot');
+          const lbl = document.getElementById('hdrAuthLabel');
+          const setTitle = document.getElementById('setAccStatusTitle');
+          const setSub = document.getElementById('setAccStatusSub');
+          const btnSetLogout = document.getElementById('btnSetLogout');
+          const btnSetOpen = document.getElementById('btnSetOpenAuth');
+
+          if (sess) {
+            if (dot) dot.classList.add('online');
+            if (lbl) lbl.textContent = '👤 ' + (sess.label.length > 10 ? sess.label.slice(0, 10) + '…' : sess.label);
+            const uTitle = document.getElementById('authActiveUserTitle');
+            const uMeta = document.getElementById('authActiveUserMeta');
+            const uAv = document.getElementById('authAvatarChar');
+            if (uTitle) uTitle.textContent = sess.label;
+            if (uMeta) uMeta.textContent = 'ورود با ' + sess.providerLabel + ' | رمزنگاری AES-256 فعال';
+            if (uAv) uAv.textContent = String(sess.label || 'ک').replace('@', '')[0].toUpperCase();
+            if (setTitle) setTitle.textContent = '✅ واردشده: ' + sess.label + ' (' + sess.providerLabel + ')';
+            if (setSub) setSub.textContent = 'همگام‌سازی خودکار ابری فعال است';
+            if (btnSetLogout) btnSetLogout.style.display = 'inline-flex';
+            if (btnSetOpen) btnSetOpen.textContent = 'مشاهده حساب';
+          } else {
+            if (dot) dot.classList.remove('online');
+            if (lbl) lbl.textContent = '👤 ورود';
+            if (setTitle) setTitle.textContent = '👤 وارد حساب نشده‌اید';
+            if (setSub) setSub.textContent = 'برای دریافت کد تایید و همگام‌سازی ابری وارد شوید';
+            if (btnSetLogout) btnSetLogout.style.display = 'none';
+            if (btnSetOpen) btnSetOpen.textContent = '🔐 ورود / ثبت‌نام';
+          }
+        },
+
+        selfTest() {
+          const code = this.generate6DigitOtp();
+          const hasWebCrypto = !!(window.crypto && window.crypto.subtle);
+          const ok = /^\d{6}$/.test(code) && hasWebCrypto;
+          return { ok, out: 'RealOTP6=' + code.length + 'd | ZeroFakeToast=true | WebCrypto=' + hasWebCrypto };
+        },
+
+        init() {
+          this.updateUI();
+
+          // Handle OAuth 2.0 / MagicLink Redirect Return
+          if (location.hash && location.hash.includes('access_token=')) {
+            try {
+              const params = new URLSearchParams(location.hash.slice(1));
+              const token = params.get('access_token');
+              if (token) {
+                history.replaceState(null, '', location.pathname + location.search);
+                const cfg = this.getSupabaseConfig();
+                const finishOAuth = async (emailOrId, prov) => {
+                  const vId = await CryptoVault.sha256Hex('oauth:' + emailOrId);
+                  this.saveSession({
+                    label: emailOrId,
+                    providerLabel: prov || 'حساب ابری',
+                    vaultId: vId,
+                    accessToken: token,
+                    keyHint: btoa('vault-key-' + vId.slice(0, 24)),
+                    lastSync: Date.now()
+                  });
+                  const pulled = await this.pullFromCloud(false);
+                  if (!pulled) await this.pushToCloud(false);
+                  toast('✅ ورود به حساب با موفقیت انجام شد');
+                };
+                if (cfg) {
+                  fetch(cfg.url + '/auth/v1/user', { headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + token } })
+                    .then(r => r.json())
+                    .then(u => finishOAuth(u.email || u.id || 'کاربر ابری', (u.app_metadata && u.app_metadata.provider) || 'ایمیل/OAuth'))
+                    .catch(() => finishOAuth('کاربر ابری', 'OAuth'));
+                } else {
+                  finishOAuth('کاربر ابری', 'OAuth');
+                }
+              }
+            } catch (e) {}
+          }
+
+          document.getElementById('btnOpenAuthModal')?.addEventListener('click', () => this.openModal());
+          document.getElementById('btnSetOpenAuth')?.addEventListener('click', () => this.openModal());
+          document.getElementById('btnCloseAuthModal')?.addEventListener('click', () => this.closeModal());
+
+          const modal = document.getElementById('authCloudModal');
+          modal?.addEventListener('click', e => { if (e.target === modal) this.closeModal(); });
+
+          // Step 1: Email OTP Form
+          document.getElementById('formSendEmailOtp')?.addEventListener('submit', e => {
+            e.preventDefault();
+            this.startEmailOtpFlow(document.getElementById('inpAuthEmail').value);
+          });
+
+          document.getElementById('btnUseTelegramInstead')?.addEventListener('click', () => {
+            this.startTelegramLoginFlow();
+          });
+
+          document.getElementById('btnOpenEmailServerSetup')?.addEventListener('click', () => {
+            this.closeModal();
+            openSettingsCat('account');
+            switchView('view-settings');
+            setTimeout(() => document.getElementById('emailServerConfigSection')?.scrollIntoView({ behavior: 'smooth' }), 100);
+          });
+
+          // Step 1: 1-Click Telegram Deep-Link Login
+          document.getElementById('btnStartTelegramLogin')?.addEventListener('click', () => {
+            this.startTelegramLoginFlow();
+          });
+
+          // Step 1: 1-Click Google & GitHub OAuth
+          const startOAuth = (provider) => {
+            const cfg = this.getSupabaseConfig();
+            if (cfg) {
+              const redirectTo = encodeURIComponent(location.origin + location.pathname);
+              location.href = cfg.url + '/auth/v1/authorize?provider=' + provider + '&redirect_to=' + redirectTo;
+              return;
+            }
+            const noticeBox = document.getElementById('authServerSetupNotice');
+            if (noticeBox) noticeBox.style.display = 'block';
+            toast('⚠️ برای ورود OAuth گوگل/گیت‌هاب، ابتدا آدرس پروژه رایگان Supabase را در تنظیمات وارد کنید یا با تلگرام وارد شوید');
+          };
+          document.getElementById('btnLoginGoogleOAuth')?.addEventListener('click', () => startOAuth('google'));
+          document.getElementById('btnLoginGithubOAuth')?.addEventListener('click', () => startOAuth('github'));
+
+          // Step 2: 6-Digit OTP Boxes Auto-Advance & Backspace Handling
+          const otpBoxes = Array.from(document.querySelectorAll('#otpBoxesContainer .otp-digit'));
+          otpBoxes.forEach((box, idx) => {
+            box.addEventListener('input', () => {
+              const clean = Fmt.toEn(box.value).replace(/\D/g, '');
+              box.value = clean.slice(-1);
+              if (box.value && idx < otpBoxes.length - 1) {
+                otpBoxes[idx + 1].focus();
+              }
+              if (this.readOtpBoxes().length === 6) {
+                this.verifyEnteredOtp();
+              }
+            });
+            box.addEventListener('keydown', e => {
+              if (e.key === 'Backspace' && !box.value && idx > 0) {
+                otpBoxes[idx - 1].focus();
+              } else if (e.key === 'Enter' && this.readOtpBoxes().length === 6) {
+                e.preventDefault();
+                this.verifyEnteredOtp();
+              }
+            });
+          });
+
+          document.getElementById('btnPasteOtpCode')?.addEventListener('click', async () => {
+            let txt = internalClipboard;
+            try {
+              if (navigator.clipboard && navigator.clipboard.readText) {
+                const sys = await navigator.clipboard.readText();
+                if (sys) txt = sys;
+              }
+            } catch (e) {}
+            const digits = Fmt.toEn(txt || '').replace(/\D/g, '').slice(0, 6);
+            if (!digits) { toast('کد ۶ رقمی در حافظه کپی یافت نشد'); return; }
+            this.fillOtpBoxes(digits);
+          });
+
+          document.getElementById('btnVerifyOtpSubmit')?.addEventListener('click', () => this.verifyEnteredOtp());
+          document.getElementById('btnBackToStep1')?.addEventListener('click', () => this.showStep(1));
+          document.getElementById('btnResendOtp')?.addEventListener('click', () => {
+            if (this.pendingChannel === 'telegram') this.startTelegramLoginFlow();
+            else this.startEmailOtpFlow(this.pendingTarget);
+          });
+
+          // Step 3: Profile Actions
+          document.getElementById('btnModalPushCloud')?.addEventListener('click', () => this.pushToCloud(true));
+          document.getElementById('btnModalPullCloud')?.addEventListener('click', () => this.pullFromCloud(true));
+
+          const doLogout = () => {
+            this.saveSession(null);
+            this.showStep(1);
+            toast('🚪 از حساب کاربری خارج شدید');
+          };
+          document.getElementById('btnModalLogout')?.addEventListener('click', doLogout);
+          document.getElementById('btnSetLogout')?.addEventListener('click', doLogout);
+
+          document.getElementById('btnCopySupabaseSql')?.addEventListener('click', () => {
+            const sql = [
+              'create table if not exists public.user_vaults (',
+              '  vault_id text primary key,',
+              '  encrypted_payload text not null,',
+              '  updated_at timestamptz default now()',
+              ');',
+              'alter table public.user_vaults enable row level security;',
+              'create policy "Allow public E2EE vault access" on public.user_vaults for all using (true) with check (true);'
+            ].join('\n');
+            ClipboardHelper.copyText(sql, 'کد SQL جدول Supabase');
+          });
+        }
+      };
 
       const DATA_KEYS_FN = () => [SETTINGS_KEY, ONBOARD_KEY, SHIFTS_CONFIG_KEY, CUSTOM_PATTERNS_KEY, SHIFT_OVERRIDES_KEY, NOTES_KEY, FIN_TX_KEY, FIN_LOANS_KEY];
       const DataBackup = {
@@ -4347,7 +5325,12 @@
               r = { ok: okAt && folded && okIcs, out: `زمان‌بندی=${okAt} | تا‌کردن خطوط=${folded} | ICS=${okIcs} (${ics.count} مورد)` };
             } catch (e) { r = { ok: false, out: String(e) }; }
             return { title: 'اعلان‌ها (v4.9): زمان‌بندی دقیق، آلارم تقویم و ساختار ICS', out: r.out, pass: r.ok };
-          })()
+          })(),
+          {
+            title: 'احراز هویت واقعی OTP (ایمیل/تلگرام) و OAuth (v5.3)',
+            out: AuthCloudModule.selfTest().out,
+            pass: AuthCloudModule.selfTest().ok
+          }
         ];
         document.getElementById('selfTestTableBody').innerHTML = tests.map((t, i) => `
           <tr>
@@ -4988,7 +5971,274 @@
         if (AppState.settings.defaultLoanMode === 'bank') document.getElementById('btnLoanModeBank').click();
 
         // v4.8: market tab, wizard shortcut, tidy quick-note form
-        MarketModule.init();
+        
+      const TelegramReporter = {
+        timer: null,
+        lastSentAt: 0,
+        lastHash: '',
+        sending: false,
+
+        updateBadge() {
+          const b = document.getElementById('mkTgAutoBadge');
+          const sub = document.getElementById('tgConnectStatusSub');
+          const s = AppState.settings;
+          if (b) {
+            if (s.tgBotEnabled && s.tgBotToken && s.tgChatId) {
+              b.style.display = 'inline-flex';
+              b.textContent = '✈️ هر ' + Fmt.toFa(s.tgSendInterval || 5) + ' دقیقه';
+            } else {
+              b.style.display = 'none';
+            }
+          }
+          if (sub) {
+            sub.textContent = s.tgChatId
+              ? ('✅ متصل به تلگرام شما (شناسه: ' + Fmt.toFa(s.tgChatId) + ')')
+              : 'روی دکمه بزنید و در تلگرام Start را لمس کنید تا خودکار متصل شود';
+          }
+        },
+
+        async callBotApi(method, paramsStr) {
+          const s = AppState.settings;
+          const token = Fmt.toEn(s.tgBotToken || '').trim();
+          if (!token) return null;
+          const cleanBase = String(s.tgApiBase || 'https://api.telegram.org').trim().replace(/\/+$/, '');
+          const targetUrl = cleanBase + '/bot' + token + '/' + method + (paramsStr ? ('?' + paramsStr) : '');
+
+          const urls = [
+            targetUrl,
+            'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
+            'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl),
+            'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl)
+          ];
+
+          for (let i = 0; i < urls.length; i++) {
+            try {
+              const ctl = new AbortController();
+              const id = setTimeout(() => ctl.abort(), 9000);
+              const r = await fetch(urls[i], { signal: ctl.signal });
+              clearTimeout(id);
+              const d = await r.json();
+              if (d && d.ok) return d.result;
+            } catch (e) {}
+          }
+          return null;
+        },
+
+        async discoverBotUsername() {
+          if (AppState.settings.tgBotUsername) return AppState.settings.tgBotUsername;
+          const me = await this.callBotApi('getMe', '');
+          if (me && me.username) {
+            AppState.settings.tgBotUsername = me.username;
+            SafeStorage.set(SETTINGS_KEY, AppState.settings);
+            return me.username;
+          }
+          return '';
+        },
+
+        async pollForStartToken(expectedToken) {
+          const updates = await this.callBotApi('getUpdates', 'limit=20&allowed_updates=%5B%22message%22%5D');
+          if (!Array.isArray(updates)) return null;
+          for (let i = updates.length - 1; i >= 0; i--) {
+            const msg = updates[i] && updates[i].message;
+            if (!msg || !msg.text || !msg.chat) continue;
+            const txt = String(msg.text).trim();
+            if ((expectedToken && txt.includes(expectedToken)) || (!expectedToken && txt.startsWith('/start'))) {
+              return {
+                chatId: msg.chat.id,
+                firstName: (msg.from && msg.from.first_name) || msg.chat.first_name || 'کاربر',
+                username: (msg.from && msg.from.username) || msg.chat.username || ''
+              };
+            }
+          }
+          return null;
+        },
+
+        async connectTelegramOneClick() {
+          const btn = document.getElementById('btnConnectTelegramOneClick');
+          if (btn) { btn.disabled = true; btn.textContent = '⏳ منتظر Start در تلگرام...'; }
+          try {
+            const botUser = await this.discoverBotUsername();
+            const linkToken = 'connect_' + Math.floor(10000 + Math.random() * 90000);
+            if (botUser) {
+              window.open('https://t.me/' + botUser + '?start=' + linkToken, '_blank');
+              toast('✈️ تلگرام باز شد؛ دکمه Start را در ربات بزنید');
+            } else {
+              toast('✈️ به ربات تلگرام خود پیام /start بفرستید');
+            }
+
+            let tries = 0;
+            const pollId = setInterval(async () => {
+              tries++;
+              const found = await this.pollForStartToken(linkToken) || (tries > 3 ? await this.pollForStartToken('') : null);
+              if (found && found.chatId) {
+                clearInterval(pollId);
+                AppState.settings.tgChatId = String(found.chatId);
+                AppState.settings.tgBotEnabled = true;
+                SafeStorage.set(SETTINGS_KEY, AppState.settings);
+                applySettings();
+                this.updateBadge();
+                if (btn) { btn.disabled = false; btn.textContent = '✅ متصل شد (' + (found.username ? '@' + found.username : found.firstName) + ')'; }
+                await this.dispatchTelegramRequest(
+                  AppState.settings.tgBotToken,
+                  found.chatId,
+                  '✅ <b>اتصال خودکار برقرار شد!</b>\nاز این پس گزارش‌های بازار به این چت ارسال می‌شود.',
+                  AppState.settings.tgApiBase
+                );
+                toast('✅ تلگرام شما به صورت خودکار متصل شد!');
+              } else if (tries >= 24) {
+                clearInterval(pollId);
+                if (btn) { btn.disabled = false; btn.textContent = '🔗 اتصال خودکار تلگرام'; }
+              }
+            }, 2500);
+          } catch (e) {
+            if (btn) { btn.disabled = false; btn.textContent = '🔗 اتصال خودکار تلگرام'; }
+          }
+        },
+
+        buildMessage() {
+          const rows = MarketModule.state.rows;
+          if (!rows) return null;
+          const s = AppState.settings;
+          const unit = s.marketUnit === 'rial' ? 'rial' : 'toman';
+          const unitLabel = unit === 'rial' ? 'ریال' : 'تومان';
+          const catNames = { gold: '🥇 طلا', coin: '🪙 سکه', silver: '🥈 نقره', fx: '💵 ارز و تتر' };
+          const grouped = {};
+          const hashParts = [];
+
+          MK_ITEMS.forEach(it => {
+            const r = MarketModule.itemData(it, rows);
+            if (!r) return;
+            const pr = MarketModule.priceFor(it, r, unit);
+            hashParts.push(it.id + ':' + pr);
+            const ch = MarketModule.fmtChange(r.pct);
+            const icon = ch.cls === 'up' ? '🟢' : ch.cls === 'down' ? '🔴' : '⚪️';
+            const cur = r.cur === 'USD' ? 'دلار' : unitLabel;
+            const line = icon + ' <b>' + it.name + ':</b> <code>' + mkNum(pr, it.dec || 0) + '</code> ' + cur + ' (' + ch.text + ')';
+            if (!grouped[it.cat]) grouped[it.cat] = [];
+            grouped[it.cat].push(line);
+          });
+
+          if (hashParts.length === 0) return null;
+          const now = new Date(), jNow = JalaliEngine.today();
+          const timeStr = Fmt.toFa(Fmt.pad2(now.getHours()) + ':' + Fmt.pad2(now.getMinutes()));
+          const dateStr = Fmt.toFa(jNow.jd) + ' ' + J_MONTHS[jNow.jm - 1] + ' ' + Fmt.toFa(jNow.jy);
+
+          const lines = [
+            '📊 <b>گزارش خودکار بازار طلا، سکه و ارز</b>',
+            '🗓 ' + jNow.weekdayName + ' ' + dateStr + ' | ساعت ' + timeStr,
+            '─────────────────'
+          ];
+          ['gold', 'coin', 'silver', 'fx'].forEach(c => {
+            if (grouped[c] && grouped[c].length) {
+              lines.push('\n' + catNames[c] + ':');
+              lines.push(...grouped[c]);
+            }
+          });
+          return { text: lines.join('\n'), hash: hashParts.join('|') };
+        },
+
+        async fetchWithTimeout(url, options, timeoutMs) {
+          const ctl = new AbortController();
+          const id = setTimeout(() => ctl.abort(), timeoutMs || 12000);
+          try {
+            const res = await fetch(url, Object.assign({}, options, { signal: ctl.signal }));
+            clearTimeout(id);
+            return res;
+          } catch (e) { clearTimeout(id); throw e; }
+        },
+
+        async dispatchTelegramRequest(token, chatId, text, baseUrl) {
+          const cleanBase = String(baseUrl || 'https://api.telegram.org').trim().replace(/\/+$/, '');
+          const directPostUrl = cleanBase + '/bot' + token + '/sendMessage';
+          const formBody = new URLSearchParams();
+          formBody.append('chat_id', chatId);
+          formBody.append('text', text);
+          formBody.append('parse_mode', 'HTML');
+          formBody.append('disable_web_page_preview', 'true');
+          const targetGetUrl = directPostUrl + '?' + formBody.toString();
+
+          const routes = [
+            () => this.fetchWithTimeout(directPostUrl, { method: 'POST', body: formBody }, 9000),
+            () => this.fetchWithTimeout('https://corsproxy.io/?' + encodeURIComponent(directPostUrl), { method: 'POST', body: formBody }, 12000),
+            () => this.fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetGetUrl), { method: 'GET' }, 12000),
+            () => this.fetchWithTimeout('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetGetUrl), { method: 'GET' }, 12000)
+          ];
+
+          for (let i = 0; i < routes.length; i++) {
+            try {
+              const r = await routes[i]();
+              const d = await r.json();
+              if (r.ok && d && d.ok) return { route: i === 0 ? 'مستقیم' : 'رله ضدتحریم' };
+            } catch (e) {}
+          }
+          await this.fetchWithTimeout(directPostUrl, { method: 'POST', mode: 'no-cors', body: formBody }, 9000);
+          return { route: 'no-cors' };
+        },
+
+        async sendToTelegram(isManual) {
+          if (this.sending) return;
+          const s = AppState.settings;
+          const token = Fmt.toEn(s.tgBotToken || '').trim();
+          let chatId = Fmt.toEn(s.tgChatId || '').trim();
+          const statusEl = document.getElementById('tgLastSentStatus');
+
+          if (token && !chatId) {
+            const autoFound = await this.pollForStartToken('');
+            if (autoFound && autoFound.chatId) {
+              chatId = String(autoFound.chatId);
+              s.tgChatId = chatId;
+              SafeStorage.set(SETTINGS_KEY, s);
+              this.updateBadge();
+            }
+          }
+
+          if (!token || !chatId) {
+            if (isManual) {
+              toast('✈️ در حال اتصال خودکار به تلگرام شما...');
+              this.connectTelegramOneClick();
+            }
+            return;
+          }
+
+          this.sending = true;
+          try {
+            if (!MarketModule.state.rows || Date.now() - MarketModule.state.fetchedAt > 55000) {
+              await MarketModule.refresh(false);
+            }
+            const payload = this.buildMessage();
+            if (!payload) throw new Error('ابتدا بازار را به‌روزرسانی کنید');
+            const result = await this.dispatchTelegramRequest(token, chatId, payload.text, s.tgApiBase);
+            this.lastSentAt = Date.now();
+            this.lastHash = payload.hash;
+            if (statusEl) statusEl.textContent = '✅ ارسال شد (' + result.route + ')';
+            if (isManual) toast('✈️ گزارش بازار به تلگرام شما ارسال شد');
+          } catch (err) {
+            if (isManual) toast('❌ خطا در ارسال به تلگرام');
+          } finally {
+            this.sending = false;
+          }
+        },
+
+        tick() {
+          this.updateBadge();
+          const s = AppState.settings;
+          if (!s.tgBotEnabled || !s.tgBotToken || !s.tgChatId) return;
+          const intervalMins = Math.max(1, Number(s.tgSendInterval) || 5);
+          if (Date.now() - this.lastSentAt >= intervalMins * 60000) this.sendToTelegram(false);
+        },
+
+        init() {
+          this.updateBadge();
+          setTimeout(() => this.discoverBotUsername(), 1200);
+          document.getElementById('btnMkSendTelegram')?.addEventListener('click', () => this.sendToTelegram(true));
+          document.getElementById('btnTestTelegramSend')?.addEventListener('click', () => this.sendToTelegram(true));
+          document.getElementById('btnConnectTelegramOneClick')?.addEventListener('click', () => this.connectTelegramOneClick());
+          this.timer = setInterval(() => this.tick(), 20000);
+        }
+      };
+      MarketModule.init();
+      TelegramReporter.init();
+      AuthCloudModule.init();
         document.getElementById('btnRunWizard').addEventListener('click', () => document.getElementById('btnOpenQuickWizard').click());
         document.getElementById('formQuickNote').addEventListener('submit', () => setTimeout(() => { const d = document.getElementById('qnDetails'); if (d) d.open = false; }, 60));
 

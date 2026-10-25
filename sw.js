@@ -1,7 +1,6 @@
-// File: sw.js | Version: 1.1.0 | Date: 2026-10-19
-// سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها (در صورت پشتیبانی مرورگر)
-// قیمت‌های بازار هرگز ذخیره نمی‌شوند و همیشه مستقیم از اینترنت می‌آیند.
-const CACHE = 'emp-desk-v4.9.0';
+// File: sw.js | Version: 1.2.0-AuthCloud-Ready | Date: 2026-10-25
+// سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها  ۴) عبور مستقیم درخواست‌های ابری و بازار
+const CACHE = 'emp-desk-v5.0.0';
 const DIGEST_CACHE = 'emp-digest-v49';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
@@ -21,7 +20,7 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // بازار، فونت و ... مستقیم از اینترنت
+  if (url.origin !== self.location.origin) return;
 
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -41,7 +40,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// لمس اعلان: برنامه را باز می‌کند و به بخش مربوط می‌رود
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const view = (event.notification.data && event.notification.data.view) || '';
@@ -58,7 +56,6 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-// بیدار شدن دوره‌ای (فقط اندروید/Chrome برای برنامهٔ نصب‌شده؛ زمانش را مرورگر تعیین می‌کند)
 self.addEventListener('periodicsync', event => {
   if (event.tag === 'emp-digest') event.waitUntil(runDigest());
 });
