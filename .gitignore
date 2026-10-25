@@ -1,0 +1,4 @@
+config.js
+vendor/
+node_modules/
+*.tgz
