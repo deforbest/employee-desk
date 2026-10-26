@@ -1,0 +1,4 @@
+confirm-signup.html  ←  عنوان ایمیل: کد ساخت حساب: {{ .Token }}
+magic-link.html  ←  عنوان ایمیل: کد ورود: {{ .Token }}
+recovery.html  ←  عنوان ایمیل: کد بازیابی رمز: {{ .Token }}
+reauthentication.html  ←  عنوان ایمیل: کد تأیید: {{ .Token }}

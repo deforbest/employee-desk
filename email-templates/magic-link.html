@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>
+  body{margin:0;padding:0;background:#f1f5f9}
+  .wrap{max-width:440px;margin:0 auto;padding:24px 14px}
+  .card{background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden}
+  .bar{background:#0f766e;padding:20px 22px;text-align:right}
+  .brand{color:#ffffff;font:700 15px/1.6 Tahoma,Arial,sans-serif}
+  .brand small{display:block;font-weight:400;font-size:12px;opacity:.85}
+  .body{padding:24px 22px 20px;font:14px/2 Tahoma,Arial,sans-serif;color:#0f172a}
+  h1{margin:0 0 6px;font:800 18px/1.7 Tahoma,Arial,sans-serif;color:#0f172a}
+  p{margin:0 0 14px;color:#475569}
+  .code{margin:18px 0;padding:16px 8px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:14px;text-align:center;direction:ltr;font:800 32px/1.2 'Courier New',Consolas,monospace;letter-spacing:7px;color:#115e59}
+  .note{font-size:12px;line-height:1.9;color:#64748b}
+  .foot{padding:14px 22px 20px;font:12px/1.9 Tahoma,Arial,sans-serif;color:#94a3b8;text-align:center}
+  @media (prefers-color-scheme: dark){
+    body{background:#0b1120!important}
+    .card{background:#111827!important;border-color:#1e293b!important}
+    .body,h1{color:#f1f5f9!important} p{color:#cbd5e1!important}
+    .code{background:#0f2a2a!important;border-color:#115e59!important;color:#5eead4!important}
+    .note,.foot{color:#94a3b8!important}
+  }
+</style>
+</head>
+<body>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">کد ورود شما: {{ .Token }}</div>
+<div class="wrap">
+  <div class="card">
+    <div class="bar">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="44" valign="middle"><img src="https://deforbest.github.io/employee-desk/icon-192.png" width="40" height="40" alt="" style="display:block;border-radius:10px;border:0"></td>
+        <td valign="middle" style="padding-right:12px"><div class="brand">میز کار هوشمند کارمند<small>دفتر کار روزانهٔ شما</small></div></td>
+      </tr></table>
+    </div>
+    <div class="body">
+      <h1>کد ورود شما</h1>
+      <p>برای ورود به حساب، این کد را در برنامه وارد کنید:</p>
+      <div class="code">{{ .Token }}</div>
+      <p class="note">کد تا ۱۰ دقیقه معتبر است و فقط یک بار کار می‌کند. آن را به کسی نگویید.</p>
+    </div>
+  </div>
+  <div class="foot">اگر این درخواست از طرف شما نبوده، این ایمیل را نادیده بگیرید؛ هیچ اتفاقی نمی‌افتد.<br>این ایمیل خودکار است و نیازی به پاسخ ندارد.</div>
+</div>
+</body>
+</html>
