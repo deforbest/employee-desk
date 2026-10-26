@@ -1,0 +1,28 @@
+/* File: ui.css | Version: 1.0.0 | Date: 2026-10-26
+   آیکون‌های مینیمال و ظاهر تنظیمات به سبک گروه‌بندی iOS / One UI. */
+.ic { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.btn .ic, .set-cat .ic, .badge .ic { margin-inline-end: 1px; }
+.notif-head .ic, .card-title .ic, .mk-title .ic { opacity: .85; }
+
+/* نوار دسته‌های تنظیمات: ساده و بی‌حاشیه */
+.set-cats { gap: 2px; padding: 4px 2px 8px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 10px; }
+.set-cat { border: 0; background: transparent; border-radius: 10px; padding: 9px 12px; font-weight: 700; color: var(--text-secondary); }
+.set-cat:hover { background: var(--bg-hover); }
+.set-cat[aria-selected="true"] { background: var(--primary-soft); color: var(--primary-text); border: 0; }
+
+/* گروه‌ها: کارت گرد با خط جداکنندهٔ ظریف */
+.set-group-title { font-size: .74rem; letter-spacing: 0; color: var(--text-muted); margin: 18px 12px 6px; font-weight: 700; }
+.set-group { border-radius: 14px; box-shadow: none; }
+.set-row { padding: 13px 16px; min-height: 54px; }
+.set-row-title { font-weight: 700; }
+
+/* برگهٔ حساب */
+#acctPanel .acct-card { display: flex; align-items: center; gap: 14px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 16px; flex-wrap: wrap; }
+#acctPanel .acct-av { width: 52px; height: 52px; border-radius: 50%; background: var(--primary-soft); color: var(--primary-text); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; flex-shrink: 0; }
+#acctPanel .acct-av .ic { width: 26px; height: 26px; }
+#acctPanel .acct-meta { flex: 1 1 140px; min-width: 0; }
+#acctPanel .acct-name { font-weight: 800; font-size: 1rem; }
+#acctPanel .acct-sub { font-size: .78rem; color: var(--text-muted); margin-top: 2px; overflow-wrap: anywhere; }
+#acctPanel .acct-note { font-size: .8rem; color: var(--text-secondary); line-height: 1.9; margin: 12px 6px 0; }
+#acctPanel [hidden] { display: none !important; }
+html:not(.has-auth) [data-setcat="account"], html:not(.has-auth) [data-setpanel="account"] { display: none !important; }

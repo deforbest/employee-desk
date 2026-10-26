@@ -1,13 +1,13 @@
-// File: sw.js | Version: 1.2.0 | Date: 2026-10-25
+// File: sw.js | Version: 1.3.0 | Date: 2026-10-26
 // سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها (در صورت پشتیبانی مرورگر)
 // قیمت‌های بازار هرگز ذخیره نمی‌شوند و همیشه مستقیم از اینترنت می‌آیند.
-const CACHE = 'emp-desk-v5.0.0';
+const CACHE = 'emp-desk-v5.1.0';
 const DIGEST_CACHE = 'emp-digest-v49';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 // فایل‌های ورود/ثبت‌نام؛ اگر یکی در دسترس نبود نصب سرویس‌ورکر خراب نشود
-const AUTH_ASSETS = ['./auth.js', './auth.css', './config.js', './vendor/supabase.js'];
+const AUTH_ASSETS = ['./auth.js', './auth.css', './icons.js', './ui.css', './config.js', './vendor/supabase.js'];
 // این‌ها همیشه اول از اینترنت گرفته می‌شوند (تا تغییر تنظیمات/کلیدها کهنه نماند) و فقط آفلاین از حافظه می‌آیند
-const FRESH_FIRST = /\/(auth\.js|auth\.css|config\.js)$/;
+const FRESH_FIRST = /\/(auth\.js|auth\.css|icons\.js|ui\.css|config\.js)$/;
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -95,8 +95,8 @@ async function runDigest() {
   for (const it of d.items) {
     if (shown[it.key]) continue;
     if (now >= it.at && now - it.at < 12 * 3600000) {
-      await self.registration.showNotification(it.title, {
-        body: it.body, icon: 'icon-192.png', badge: 'icon-192.png', lang: 'fa', dir: 'rtl',
+      await self.registration.showNotification(String(it.title || '').replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u23E0-\u23FF\uFE0F]/gu, '').trim(), {
+        body: String(it.body || '').replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u23E0-\u23FF\uFE0F]/gu, '').trim(), icon: 'icon-192.png', badge: 'icon-192.png', lang: 'fa', dir: 'rtl',
         tag: it.key, data: { view: it.view }, vibrate: [120, 60, 120]
       });
       shown[it.key] = now;

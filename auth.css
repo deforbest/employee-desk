@@ -65,3 +65,12 @@ html.auth-pending body > :not(#authRoot) { display: none !important; }
 .au-list { display: flex; flex-direction: column; gap: 0; }
 .au-list .au-block { margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .au-spin { animation-duration: 3s; } }
+
+/* دکمهٔ بستن در همهٔ مرحله‌ها */
+.au-card { position: relative; }
+.au-x {
+  position: absolute; top: 12px; left: 12px; width: 34px; height: 34px; border-radius: 50%; border: 0;
+  background: var(--bg-hover); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.au-x:hover { background: var(--border-color); color: var(--text-primary); }
+.au-brand { padding-left: 44px; }

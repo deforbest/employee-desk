@@ -16,7 +16,7 @@
   const DATA_KEYS = ['emp_desk_settings_v44', 'emp_onboarding_done_v44', 'emp_shifts_cfg_v43', 'emp_custom_shifts_v42',
     'emp_shift_overrides_v42', 'emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46'];
   const CONTENT_KEYS = ['emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46', 'emp_shifts_cfg_v43'];
-  const S = { user: null, email: '', mode: 'otp', forgot: false, fromAccount: false, cool: 0, timer: null, tgRun: 0, closable: false };
+  const S = { user: null, entered: false, cur: '',  email: '', mode: 'otp', forgot: false, fromAccount: false, cool: 0, timer: null, tgRun: 0, closable: false };
   let sb = null;
 
   /* ---------- ابزارها ---------- */
@@ -50,6 +50,7 @@
 
   const MARKUP = `
 <div class="au-wrap"><div class="au-card" role="dialog" aria-modal="true" aria-labelledby="auTitle">
+  <button type="button" class="au-x" id="auX" data-act="dismiss" aria-label="بستن" title="بستن">✕</button>
   <div class="au-brand"><img src="icon-192.png" alt="" width="48" height="48"><div><div class="au-brand-t">میز کار هوشمند کارمند</div><div class="au-brand-s">ورود یا ساخت حساب</div></div></div>
   <div class="au-msg" id="auMsg" role="alert" hidden></div>
 
@@ -75,8 +76,7 @@
     </form>
     <div class="au-row"><button type="button" class="au-link" id="auMode" data-act="mode">رمز عبور دارم</button><button type="button" class="au-link" id="auForgot" data-act="forgot" hidden>رمزم را فراموش کرده‌ام</button></div>
     <div id="auSocialBox" hidden><div class="au-or"><span>یا ورود با</span></div><div class="au-social" id="auSocial"></div></div>
-    <button type="button" class="au-link" data-act="guest" id="auGuest" hidden>ادامه بدون حساب کاربری</button>
-    <button type="button" class="au-link" data-act="closeauth" id="auCloseAuth" hidden>بستن</button>
+    <div class="au-row" style="justify-content:center"><button type="button" class="au-link" data-act="guest" id="auGuest" hidden>ادامه بدون حساب کاربری</button></div>
   </section>
 
   <section data-screen="code" hidden>
@@ -113,24 +113,12 @@
   </section>
 </div></div>`;
 
-  const SHEET = `
-<div class="au-sheet" role="dialog" aria-modal="true" aria-label="حساب کاربری">
-  <div class="au-sheet-h"><strong>حساب کاربری</strong><button type="button" class="btn btn-secondary btn-sm" data-act="sheetclose">بستن</button></div>
-  <div class="au-who"><div class="au-av" id="auAv">👤</div><div><div id="auName" style="font-weight:800"></div><div class="au-sub au-ltr" id="auMail"></div></div></div>
-  <div class="au-list">
-    <button type="button" class="btn btn-secondary au-block" data-act="backup">☁️ ذخیرهٔ داده‌ها در ابر</button>
-    <button type="button" class="btn btn-secondary au-block" data-act="restore">⬇️ بازیابی از ابر</button>
-    <button type="button" class="btn btn-secondary au-block" data-act="chpw" id="auChPw">🔑 تعیین / تغییر رمز عبور</button>
-    <button type="button" class="btn btn-danger au-block" data-act="logout">🚪 خروج از حساب</button>
-  </div>
-  <p class="au-sub" id="auSyncInfo">پشتیبان ابری فقط برای خود شما قابل خواندن است.</p>
-</div>`;
 
   const authRoot = D.createElement('div'); authRoot.id = 'authRoot'; authRoot.innerHTML = MARKUP; D.body.appendChild(authRoot);
-  const sheet = D.createElement('div'); sheet.id = 'auSheet'; sheet.className = 'au-backdrop'; sheet.hidden = true; sheet.innerHTML = SHEET; D.body.appendChild(sheet);
 
   const show = name => {
     authRoot.querySelectorAll('[data-screen]').forEach(s => { s.hidden = s.dataset.screen !== name; });
+    S.cur = name; $('auX').hidden = !(S.entered || GUEST_OK);
     msg('');
     const f = authRoot.querySelector('[data-screen="' + name + '"] input'); if (f && !f.closest('[hidden]')) setTimeout(() => { try { f.focus(); } catch (e) {} }, 60);
   };
@@ -266,13 +254,25 @@
   }
 
   /* ---------- ورود به برنامه ---------- */
-  function openAuth(closable) {
-    S.closable = !!closable; authRoot.hidden = false; setMode('otp'); show('email'); $('auCloseAuth').hidden = !closable;
+  function openAuth() { authRoot.hidden = false; setMode('otp'); show('email'); }
+  function dismiss() {
+    if (!(S.entered || GUEST_OK)) return;
+    S.tgRun++;
+    if (S.user && S.cur === 'setpw' && !S.fromAccount) { try { sb.auth.updateUser({ data: { pwd_asked: true } }).catch(() => {}); } catch (e) {} return enter(S.user, true); }
+    if (S.entered) return closeAuth();
+    enter(null, false);
+  }
+  function renderAccount() {
+    const u = S.user, md = (u && u.user_metadata) || {}, tg = md.provider === 'telegram';
+    const name = u ? (md.full_name || md.name || (u.email && !tg ? u.email.split('@')[0] : 'کاربر')) : 'مهمان';
+    const set = (id, t) => { const e = $(id); if (e) e.textContent = t; };
+    set('acctName', name); set('acctSub', u ? (tg ? 'ورود با تلگرام' : (u.email || '')) : 'بدون حساب کاربری');
+    set('acctAv', u ? (String(name).trim().charAt(0).toUpperCase() || '?') : '👤');
+    [['acctLogin', !!u], ['acctGuestNote', !!u], ['acctUserBox', !u], ['acctPwRow', tg]].forEach(a => { const e = $(a[0]); if (e) e.hidden = a[1]; });
   }
   function closeAuth() { authRoot.hidden = true; S.fromAccount = false; }
   function enter(user, fresh) {
-    S.user = user || null; closeAuth(); window.__authReady = true; root.classList.remove('auth-pending');
-    const b = $('btnAccount'); if (b) b.hidden = false;
+    S.user = user || null; S.entered = true; closeAuth(); window.__authReady = true; root.classList.remove('auth-pending'); renderAccount();
     if (user && fresh) maybeRestore();
     try { if (user) localStorage.removeItem('emp_guest'); else localStorage.setItem('emp_guest', '1'); } catch (e) {}
   }
@@ -288,7 +288,7 @@
     if (q.has('code') || q.has('error') || h.has('error')) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
     if (session && session.user) return enter(session.user, q.has('code'));
     if (GUEST_OK && localStorage.getItem('emp_guest') === '1') return enter(null, false);
-    openAuth(false); if (oerr) msg('ورود ناموفق بود؛ دوباره تلاش کنید.');
+    openAuth(); if (oerr) msg('ورود ناموفق بود؛ دوباره تلاش کنید.');
   }
   sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && S.user) { S.user = null; location.reload(); } });
 
@@ -335,17 +335,7 @@
     location.reload();
   }
 
-  /* ---------- برگهٔ حساب ---------- */
-  function openSheet() {
-    const u = S.user, md = (u && u.user_metadata) || {}, tg = md.provider === 'telegram';
-    const name = md.full_name || md.name || (u.email && !tg ? u.email.split('@')[0] : 'کاربر');
-    $('auName').textContent = name; $('auAv').textContent = String(name).trim().charAt(0).toUpperCase() || '👤';
-    $('auMail').textContent = tg ? 'ورود با تلگرام' : (u.email || '');
-    $('auChPw').hidden = tg; sheet.hidden = false;
-  }
-  const closeSheet = () => { sheet.hidden = true; };
-  sheet.addEventListener('click', e => { if (e.target === sheet) closeSheet(); });
-  D.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
+  D.addEventListener('keydown', e => { if (e.key === 'Escape' && !authRoot.hidden) dismiss(); });
 
   /* ---------- رویدادها ---------- */
   function onAct(e) {
@@ -364,17 +354,15 @@
     else if (a === 'social') { const p = t.dataset.p; if (p === 'telegram' || p === 'phone') startTg(p); else oauth(p); }
     else if (a === 'tgcancel') { S.tgRun++; show('email'); }
     else if (a === 'guest') enter(null, false);
-    else if (a === 'closeauth') closeAuth();
-    else if (a === 'sheetclose') closeSheet();
+    else if (a === 'dismiss') dismiss();
+    else if (a === 'login') openAuth();
     else if (a === 'backup') backup(false);
     else if (a === 'restore') restore(true);
-    else if (a === 'chpw') { closeSheet(); S.fromAccount = true; authRoot.hidden = false; preparePw(false); show('setpw'); }
-    else if (a === 'logout') { closeSheet(); logout(); }
+    else if (a === 'chpw') { S.fromAccount = true; authRoot.hidden = false; preparePw(false); show('setpw'); }
+    else if (a === 'logout') logout();
   }
-  authRoot.addEventListener('click', onAct); sheet.addEventListener('click', onAct);
-  D.addEventListener('click', e => {
-    if (e.target.closest && e.target.closest('#btnAccount')) { if (S.user) openSheet(); else openAuth(true); }
-  });
+  authRoot.addEventListener('click', e => { onAct(e); if (!e.target.closest('.au-card') && D.contains(e.target)) dismiss(); });
+  const panel = $('acctPanel'); if (panel) panel.addEventListener('click', onAct);
 
   setMode('otp'); boot();
 })();

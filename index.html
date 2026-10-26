@@ -614,7 +614,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <!-- ورود و ثبت‌نام (v5.0): config.js هنگام انتشار از Secrets/Variables گیت‌هاب ساخته می‌شود -->
   <script src="config.js"></script>
-  <script>if (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) document.documentElement.classList.add('auth-pending');</script>
+  <script>if (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) document.documentElement.classList.add('auth-pending', 'has-auth');</script>
+  <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="auth.css">
 </head>
 <body>
@@ -733,7 +734,6 @@
         </div>
 
         <div class="topbar-tools">
-          <button type="button" class="btn btn-secondary btn-sm" id="btnAccount" aria-label="حساب کاربری" title="حساب کاربری" hidden>👤</button>
           <div class="notif-wrap" id="notifBellWrap"><button type="button" class="btn btn-secondary btn-sm" id="btnNotifBell" aria-haspopup="true" aria-expanded="false" aria-controls="notifPanel" aria-label="اعلان‌ها">🔔<span class="notif-badge zero" id="notifBadge">۰</span></button></div>
           <button type="button" class="btn btn-secondary btn-sm" id="btnOpenQuickWizard" aria-label="تنظیم سریع" title="تنظیم سریع">⚡</button>
           <button type="button" class="btn btn-secondary btn-sm" id="btnQuickTheme"><span id="themeBtnLabel">🌙 تاریک</span></button>
@@ -831,7 +831,7 @@
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                   <div class="field">
-                    <label for="inpQuickNoteTime" style="font-size:0.75rem;" data-help="ساعت را تایپ کنید (مثلاً ۰۸۳۰) یا با دکمهٔ 🕒 انتخاب کنید.">ساعت یادآور</label>
+                    <label for="inpQuickNoteTime" style="font-size:0.75rem;" data-help="ساعت را تایپ کنید (مثلاً ۰۸۳۰) یا با دکمهٔ ساعت انتخاب کنید.">ساعت یادآور</label>
                     <input type="text" id="inpQuickNoteTime" class="input ltr-input picker-trigger-input" data-picker="time" data-picker-title="انتخاب ساعت یادآور" placeholder="08:30" value="08:00" maxlength="5">
                   </div>
                   <div class="field">
@@ -934,7 +934,7 @@
                   </div>
 
                   <div class="field">
-                    <label for="inpFinDate" data-help="تاریخ را مثل ۱۴۰۵/۰۷/۲۲ تایپ کنید یا با 📅 انتخاب کنید.">تاریخ ثبت</label>
+                    <label for="inpFinDate" data-help="تاریخ را مثل ۱۴۰۵/۰۷/۲۲ تایپ کنید یا با دکمهٔ تقویم انتخاب کنید.">تاریخ ثبت</label>
                     <input type="text" id="inpFinDate" class="input ltr-input picker-trigger-input" data-picker="date" data-picker-title="انتخاب تاریخ تراکنش" value="1405/07/22" maxlength="10">
                   </div>
                 </div>
@@ -1030,7 +1030,7 @@
 
                   <!-- 5. Exact Date Input with Live Mask & Touch Calendar -->
                   <div class="field">
-                    <label for="inpLoanAnchorDate" data-help="تاریخ را تایپ کنید یا با 📅 انتخاب کنید.">
+                    <label for="inpLoanAnchorDate" data-help="تاریخ را تایپ کنید یا با دکمهٔ تقویم انتخاب کنید.">
                       <span id="lblLoanAnchorDate">۵. تاریخ اولین قسط</span>
                     </label>
                     <input type="text" id="inpLoanAnchorDate" class="input ltr-input picker-trigger-input" data-picker="date" data-picker-title="انتخاب تاریخ دقیق سررسید قسط" value="1405/01/01" placeholder="1405/01/01" maxlength="10" required>
@@ -1226,12 +1226,35 @@
 
 <section id="view-settings" class="view-pane" role="tabpanel" aria-label="تنظیمات">
           <div class="set-cats" role="tablist" aria-label="دسته‌بندی تنظیمات" id="setCats">
+            <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="account">👤 حساب</button>
             <button type="button" class="set-cat" role="tab" aria-selected="true" data-setcat="appearance">🎨 ظاهر</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="access">♿ دسترسی‌پذیری</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="shift">🕒 شیفت و تقویم</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="finance">💳 وام و حسابداری</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="notify">🔔 اعلان‌ها</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="data">💾 داده‌ها و آزمون</button>
+          </div>
+
+          <!-- ============ ACCOUNT ============ -->
+          <div class="set-panel" data-setpanel="account" id="acctPanel">
+            <div class="acct-card">
+              <div class="acct-av" id="acctAv">👤</div>
+              <div class="acct-meta"><div class="acct-name" id="acctName">مهمان</div><div class="acct-sub" id="acctSub">بدون حساب کاربری</div></div>
+              <button type="button" class="btn btn-primary btn-sm" data-act="login" id="acctLogin">ورود / ثبت‌نام</button>
+            </div>
+            <p class="acct-note" id="acctGuestNote">بدون حساب هم همهٔ امکانات برنامه کار می‌کند و داده‌ها فقط روی همین دستگاه می‌مانند. اگر وارد شوید، می‌توانید از داده‌هایتان در فضای ابری پشتیبان بگیرید و در دستگاه دیگر برگردانید.</p>
+            <div id="acctUserBox" hidden>
+              <div class="set-group-title">پشتیبان ابری</div>
+              <div class="set-group">
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">ذخیرهٔ داده‌ها در ابر</div><div class="set-row-sub">فقط خودتان به آن دسترسی دارید</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="backup">⬆️ ذخیره</button></div>
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">بازیابی از ابر</div><div class="set-row-sub">داده‌های این دستگاه جایگزین می‌شود</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="restore">⬇️ بازیابی</button></div>
+              </div>
+              <div class="set-group-title">حساب</div>
+              <div class="set-group">
+                <div class="set-row" id="acctPwRow"><div class="set-row-text"><div class="set-row-title">رمز عبور</div><div class="set-row-sub">برای ورود بدون کد ایمیل</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="chpw">تعیین / تغییر</button></div>
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">خروج از حساب</div><div class="set-row-sub">پس از پشتیبان‌گیری، داده‌های این دستگاه پاک می‌شود</div></div><button type="button" class="btn btn-danger btn-sm" data-act="logout">خروج</button></div>
+              </div>
+            </div>
           </div>
 
           <!-- ============ APPEARANCE ============ -->
@@ -3001,6 +3024,7 @@
       /* Chrome on Android forbids `new Notification()`; the service worker must show it. */
       NotifyModule.show = async function (title, body, opt) {
         opt = opt || {};
+        if (window.stripEmoji) { title = window.stripEmoji(title); body = window.stripEmoji(body); }
         const o = { body: body || '', icon: 'icon-192.png', badge: 'icon-192.png', lang: 'fa', dir: 'rtl', data: { view: opt.view || '' }, vibrate: [120, 60, 120] };
         if (opt.tag) o.tag = opt.tag;
         try {
@@ -3219,7 +3243,7 @@
             if (nt.done || !nt.dateKey || nt.dateKey < todayKey) return;
             const p = Fmt.parseDateKey(nt.dateKey); if (!p) return;
             const g = JalaliEngine.toGregorian(p.jy, p.jm, p.jd);
-            const ev = ['BEGIN:VEVENT', `UID:${nt.id}@emp-desk`, `DTSTAMP:${stamp}`, 'SUMMARY:' + this.esc('⏰ ' + nt.title)];
+            const ev = ['BEGIN:VEVENT', `UID:${nt.id}@emp-desk`, `DTSTAMP:${stamp}`, 'SUMMARY:' + this.esc(nt.title)];
             const at = nt.time ? NotifyModule.atMs(nt.dateKey, nt.time, 0) : null;
             if (at !== null) {
               ev.push(`DTSTART:${this.dt(at)}`, `DTEND:${this.dt(at + 15 * 60000)}`);
@@ -3238,7 +3262,7 @@
               const g = JalaliEngine.toGregorian(x.jy, x.jm, x.jd);
               const nx = new Date(g.gy, g.gm - 1, g.gd + 1);
               const text = `قسط «${ln.name}» — ${amt}`;
-              L.push('BEGIN:VEVENT', `UID:loan-${id}-${x.dateKey}@emp-desk`, `DTSTAMP:${stamp}`, 'SUMMARY:' + this.esc('🏦 ' + text),
+              L.push('BEGIN:VEVENT', `UID:loan-${id}-${x.dateKey}@emp-desk`, `DTSTAMP:${stamp}`, 'SUMMARY:' + this.esc(text),
                 `DTSTART;VALUE=DATE:${this.d8(g)}`, `DTEND;VALUE=DATE:${nx.getFullYear()}${Fmt.pad2(nx.getMonth() + 1)}${Fmt.pad2(nx.getDate())}`,
                 ...alarm('-PT15H', 'فردا ' + text), ...alarm('PT9H', 'امروز ' + text), 'END:VEVENT');
               count++;
@@ -5068,6 +5092,7 @@
       });
     })();
   </script>
+<script src="icons.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="auth.js"></script>
 <script>
