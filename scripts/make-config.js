@@ -13,8 +13,8 @@ const cfg = {
   TELEGRAM_BOT: (e.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''),
   ENABLE_GOOGLE: bool(e.ENABLE_GOOGLE),
   ENABLE_GITHUB: bool(e.ENABLE_GITHUB),
-  ALLOW_GUEST: bool(e.ALLOW_GUEST),
-  OTP_LENGTH: Number(e.OTP_LENGTH) || 6,
+  ALLOW_GUEST: String(e.ALLOW_GUEST || '').trim().toLowerCase() !== 'false', // پیش‌فرض: ورود مهمان فعال
+  OTP_LENGTH: Number(e.OTP_LENGTH) || 8,
 };
 if (url && !cfg.SUPABASE_ANON_KEY) { console.error('SUPABASE_ANON_KEY خالی است.'); process.exit(1); }
 fs.writeFileSync('config.js', 'window.APP_CONFIG=' + JSON.stringify(cfg) + ';\n');

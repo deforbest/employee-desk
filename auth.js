@@ -10,7 +10,8 @@
 
   const D = document;
   const $ = id => D.getElementById(id);
-  const OTP_LEN = Number(CFG.OTP_LENGTH) || 6;
+  const OTP_LEN = Number(CFG.OTP_LENGTH) || 8;
+  const GUEST_OK = CFG.ALLOW_GUEST !== false; // ورود مهمان به‌طور پیش‌فرض فعال است
   const STORE_KEY = 'emp-auth';
   const DATA_KEYS = ['emp_desk_settings_v44', 'emp_onboarding_done_v44', 'emp_shifts_cfg_v43', 'emp_custom_shifts_v42',
     'emp_shift_overrides_v42', 'emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46'];
@@ -80,9 +81,9 @@
 
   <section data-screen="code" hidden>
     <h1 class="au-h">کد تأیید را وارد کنید</h1>
-    <p class="au-p">کد به <b class="au-ltr" id="auSentTo"></b> ارسال شد. اگر نرسید، پوشهٔ اسپم را هم ببینید.</p>
+    <p class="au-p">کد ۸ رقمی به <b class="au-ltr" id="auSentTo"></b> ارسال شد. اگر نرسید، پوشهٔ اسپم را هم ببینید.</p>
     <form id="auCodeForm" novalidate>
-      <input class="input au-code" id="auCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="••••••" dir="ltr" aria-label="کد تأیید">
+      <input class="input au-code" id="auCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="••••••••" dir="ltr" aria-label="کد تأیید">
       <button type="submit" class="btn btn-primary au-block">تأیید و ورود</button>
     </form>
     <div class="au-row"><button type="button" class="au-link" id="auResend" data-act="resend">ارسال مجدد کد</button><button type="button" class="au-link" data-act="changeemail">تغییر ایمیل</button></div>
@@ -147,7 +148,7 @@
     $('auSocial').innerHTML = SOCIAL.map(s => `<button type="button" class="btn btn-secondary" data-act="social" data-p="${s[0]}"><span class="au-ico" style="background:${s[3]}">${s[2]}</span>${s[1]}</button>`).join('');
     $('auSocialBox').hidden = false;
   }
-  if (CFG.ALLOW_GUEST) $('auGuest').hidden = false;
+  if (GUEST_OK) $('auGuest').hidden = false;
 
   /* ---------- ورود با ایمیل ---------- */
   function setMode(m) {
@@ -182,7 +183,7 @@
   function tick() { const b = $('auResend'); if (!b) return; b.disabled = S.cool > 0; b.textContent = S.cool > 0 ? 'ارسال مجدد (' + toFa(S.cool) + ')' : 'ارسال مجدد کد'; }
   function verifyCode() {
     const token = toEn($('auCode').value).replace(/\D/g, '');
-    if (token.length < 6) return msg('کد را کامل وارد کنید.');
+    if (token.length < OTP_LEN) return msg('کد را کامل وارد کنید (' + toFa(OTP_LEN) + ' رقم).');
     run(async () => {
       const { data, error } = await sb.auth.verifyOtp({ email: S.email, token, type: 'email' });
       if (error) { $('auCode').value = ''; return msg(errText(error)); }
@@ -286,7 +287,7 @@
     if (!session && !navigator.onLine) session = cachedSession(); // آفلاین: با نشست ذخیره‌شده وارد می‌شود
     if (q.has('code') || q.has('error') || h.has('error')) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
     if (session && session.user) return enter(session.user, q.has('code'));
-    if (CFG.ALLOW_GUEST && localStorage.getItem('emp_guest') === '1') return enter(null, false);
+    if (GUEST_OK && localStorage.getItem('emp_guest') === '1') return enter(null, false);
     openAuth(false); if (oerr) msg('ورود ناموفق بود؛ دوباره تلاش کنید.');
   }
   sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && S.user) { S.user = null; location.reload(); } });
