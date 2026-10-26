@@ -82,7 +82,7 @@ jobs:
       - name: Assemble site (only public files)
         run: |
           mkdir _site
-          cp index.html manifest.webmanifest sw.js auth.js auth.css config.js icon-192.png icon-512.png icon-maskable-512.png _site/
+          cp index.html manifest.webmanifest sw.js auth.js auth.css icons.js ui.css config.js icon-192.png icon-512.png icon-maskable-512.png _site/
           cp -r vendor _site/vendor
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
