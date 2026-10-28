@@ -74,3 +74,17 @@ html.auth-pending body > :not(#authRoot) { display: none !important; }
 }
 .au-x:hover { background: var(--border-color); color: var(--text-primary); }
 .au-brand { padding-left: 44px; }
+
+/* مراحل، وضعیت و دسترس‌پذیری */
+.au-steps { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 14px; }
+.au-steps li { flex: 1; text-align: center; font-size: .72rem; font-weight: 700; color: var(--text-muted); padding-top: 9px; border-top: 3px solid var(--border-color); border-radius: 2px; }
+.au-steps li.now { color: var(--primary-text); border-top-color: var(--primary); }
+.au-steps li.done { color: var(--text-secondary); border-top-color: var(--primary); opacity: .6; }
+.au-status { display: flex; align-items: center; gap: 9px; font-size: .84rem; font-weight: 700; color: var(--primary-text); background: var(--primary-soft); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px; }
+.au-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+.au-status.spin .au-dot { background: transparent; border: 2px solid var(--primary); border-top-color: transparent; width: 14px; height: 14px; animation: au-r .8s linear infinite; }
+.au-wrap .input { font-size: 16px; min-height: 48px; }
+.au-wrap .btn { min-height: 44px; }
+.au-link { min-height: 40px; }
+.au-card h1:focus { outline: none; }
+.au-card :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 8px; }

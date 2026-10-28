@@ -7,8 +7,11 @@ if (url && !/^https:\/\/[a-z0-9]{10,30}\.supabase\.co$/.test(url)) {
   console.error('SUPABASE_URL درست نیست؛ باید مثل https://abcdefgh.supabase.co باشد.'); process.exit(1);
 }
 const bool = v => String(v || '').trim().toLowerCase() === 'true';
+const proxy = (e.SUPABASE_PROXY_URL || '').trim().replace(/\/+$/, '');
+if (proxy && !/^https:\/\/[a-z0-9.-]+$/i.test(proxy)) { console.error('SUPABASE_PROXY_URL درست نیست؛ باید مثل https://name.account.workers.dev باشد (بدون / آخر و بدون مسیر).'); process.exit(1); }
 const cfg = {
   SUPABASE_URL: url,
+  SUPABASE_PROXY_URL: proxy,
   SUPABASE_ANON_KEY: (e.SUPABASE_ANON_KEY || '').trim(),
   TELEGRAM_BOT: (e.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''),
   ENABLE_GOOGLE: bool(e.ENABLE_GOOGLE),
