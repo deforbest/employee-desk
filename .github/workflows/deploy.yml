@@ -72,6 +72,7 @@ jobs:
       - name: Build config.js
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PROXY_URL: ${{ vars.SUPABASE_PROXY_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
           ENABLE_GOOGLE: ${{ vars.ENABLE_GOOGLE }}
@@ -79,6 +80,13 @@ jobs:
           ALLOW_GUEST: ${{ vars.ALLOW_GUEST }}
           OTP_LENGTH: ${{ vars.OTP_LENGTH }}
         run: node scripts/make-config.js
+      - name: Minify (optional, set variable MINIFY=true)
+        if: ${{ vars.MINIFY == 'true' }}
+        run: |
+          npx --yes html-minifier-terser@7.2.0 --minify-js '{"compress":true,"mangle":true}' --minify-css true --remove-comments -o index.min.html index.html
+          mv index.min.html index.html
+          npx --yes terser@5.31.0 auth.js -c -m -o auth.min.js && mv auth.min.js auth.js
+          npx --yes terser@5.31.0 icons.js -c -m -o icons.min.js && mv icons.min.js icons.js
       - name: Assemble site (only public files)
         run: |
           mkdir _site
