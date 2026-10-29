@@ -38,7 +38,7 @@
     let u = DIRECT; try { u = await Promise.any([ping(PROXY, 6000), ping(DIRECT, 6000)]); } catch (e) { u = PROXY; }
     ssSet('emp_ep', JSON.stringify({ u, at: Date.now() })); return u;
   }
-  let probeP = probe().then(u => { chosen = u; });
+  let probeP = probe().then(u => { chosen = u; window.__authEndpoint = u; try { console.info('[auth] endpoint:', u === DIRECT ? 'direct' : 'proxy'); } catch (e) {} });
   const swap = (url, to) => (typeof url === 'string' && url.indexOf(DIRECT) === 0) ? to + url.slice(DIRECT.length) : url;
   async function smartFetch(input, init) {
     await probeP;
