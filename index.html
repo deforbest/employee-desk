@@ -615,7 +615,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <!-- ورود و ثبت‌نام (v5.0): config.js هنگام انتشار از Secrets/Variables گیت‌هاب ساخته می‌شود -->
   <script src="config.js"></script>
-  <script>if (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) document.documentElement.classList.add('auth-pending', 'has-auth');</script>
+  <script>if (window.APP_CONFIG && (window.APP_CONFIG.SUPABASE_URL || window.APP_CONFIG.SUPABASE_PROXY_URL)) document.documentElement.classList.add('auth-pending', 'has-auth');</script>
   <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="auth.css">
 </head>
@@ -1233,7 +1233,7 @@
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="shift">🕒 شیفت و تقویم</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="finance">💳 وام و حسابداری</button>
             <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="notify">🔔 اعلان‌ها</button>
-            <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="data">💾 داده‌ها و آزمون</button>
+            <button type="button" class="set-cat" role="tab" aria-selected="false" data-setcat="data">💾 داده‌ها</button>
           </div>
 
           <!-- ============ ACCOUNT ============ -->
@@ -1249,6 +1249,11 @@
               <div class="set-group">
                 <div class="set-row"><div class="set-row-text"><div class="set-row-title">ذخیرهٔ داده‌ها در ابر</div><div class="set-row-sub">فقط خودتان به آن دسترسی دارید</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="backup">⬆️ ذخیره</button></div>
                 <div class="set-row"><div class="set-row-text"><div class="set-row-title">بازیابی از ابر</div><div class="set-row-sub">داده‌های این دستگاه جایگزین می‌شود</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="restore">⬇️ بازیابی</button></div>
+              </div>
+              <div class="set-group-title">امنیت</div>
+              <div class="set-group">
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">تأیید دو مرحله‌ای</div><div class="set-row-sub">با برنامهٔ احراز هویت · وضعیت: <span id="acctMfaState">…</span></div></div><button type="button" class="btn btn-primary btn-sm" id="acctMfaBtn" data-act="mfaon">فعال‌سازی</button></div>
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">دستگاه‌های وارد شده</div><div class="set-row-sub">دیدن و حذف نشست‌های فعال</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="sessions">مشاهده</button></div>
               </div>
               <div class="set-group-title">حساب</div>
               <div class="set-group">
@@ -1595,7 +1600,7 @@
           </div>
 
           
-<!-- ============ DATA & TESTS ============ -->
+<!-- ============ DATA ============ -->
           <div class="set-panel" data-setpanel="data">
             <div class="set-group-title">پشتیبان‌گیری (بدون اینترنت)</div>
             <div class="set-group">
@@ -1618,18 +1623,6 @@
               </div>
             </div>
 
-            <div class="card" style="margin-top:16px;">
-              <div class="card-head">
-                <div class="card-title">✅ تست خودکار سلامت (نسخه ۴.۹)</div>
-                <button type="button" class="btn btn-secondary btn-sm" id="btnReRunTests">تست مجدد</button>
-              </div>
-              <div class="table-container">
-                <table>
-                  <thead><tr><th>ردیف</th><th>بخش تست‌شده</th><th>نتیجه</th><th>وضعیت</th></tr></thead>
-                  <tbody id="selfTestTableBody"></tbody>
-                </table>
-              </div>
-            </div>
           </div>
         </section>
       </main>
@@ -4323,72 +4316,6 @@
         }, { passive: true });
       }
 
-      /* SELF-TEST SUITE (Verifying User's Exact Example: 1405/01/01 + 2 Overdue on 1405/07/22) */
-      function runSelfTests() {
-        const ex = FinanceModule.analyzeLoanSchedule('start', '1405/01/01', 24, { overdueInput: 2 }, '1405/07/22');
-        const maskD = Fmt.maskDateLive('14050101', false);
-        const maskT = Fmt.maskTimeLive('0830', false);
-        const tests = [
-          {
-            title: 'تست سناریوی دقیق شما: شروع ۱۴۰۵/۰۱/۰۱ با ۲ قسط معوق در تاریخ ۲۲ مهر ۱۴۰۵',
-            out: `Paid: ${ex.paidCount} (Last: ${ex.lastPaidDate}) | Overdue: ${ex.overdueList.map(x => x.dateKey + '(' + x.daysPassed + 'd)').join(', ')}`,
-            pass: ex.maturedCount === 7 && ex.paidCount === 5 && ex.lastPaidDate === '1405/05/01' && ex.overdueList.length === 2 && ex.overdueList[1].dateKey === '1405/07/01' && ex.overdueList[1].daysPassed === 21
-          },
-          {
-            title: 'نمایش زنده جداکننده‌های تاریخ (/) و زمان (:) حین تایپ دستی',
-            out: `14050101 -> ${maskD} | 0830 -> ${maskT}`,
-            pass: maskD === '1405/01/01' && maskT === '08:30'
-          },
-          {
-            title: 'انتخابگر درون‌خطی ساعت: تایپ سریع و اعتبارسنجی (InlinePicker)',
-            out: `830 -> ${InlinePicker.normTime('830')} | 2560 -> ${InlinePicker.normTime('2560')} | 8 -> ${Fmt.maskTimeLive('8', false)}`,
-            pass: InlinePicker.normTime('830') === '08:30' && InlinePicker.normTime('2560') === null && InlinePicker.normTime('08:3') === '08:03' && Fmt.maskTimeLive('8', false) === '08:'
-          },
-          {
-            title: 'مبلغ به حروف (میلیارد، میلیون، هزار و باقی‌مانده)',
-            out: `${Fmt.rialToTomanReadable(123456780)} | ${Fmt.rialToTomanReadable(10000000000)}`,
-            pass: Fmt.rialToTomanReadable(123456780).indexOf('۱۲ میلیون و ۳۴۵ هزار و ۶۷۸') >= 0 && Fmt.rialToTomanReadable(10000000000).indexOf('میلیارد') >= 0
-          },
-          {
-            title: 'حالت‌های روشن/تاریک و ادغام پیش‌فرض تنظیمات',
-            out: `dark -> ${effectiveTheme({ themeMode: 'dark' })} | light -> ${effectiveTheme({ themeMode: 'light' })}`,
-            pass: effectiveTheme({ themeMode: 'dark' }) === 'dark' && effectiveTheme({ themeMode: 'light' }) === 'light' && AppState.settings.helpMode !== undefined && AppState.settings.notifyTime !== undefined
-          },
-          {
-            title: 'مرکز اعلان‌ها (تاریخ امروز، یادآور، اقساط)',
-            out: `items: ${NotifyModule.collect().length}`,
-            pass: Array.isArray(NotifyModule.collect())
-          },
-          {
-            title: 'بازار: تجزیهٔ فید، ۲۲ عیار محاسبه‌ای، تبدیل ریال، رنگ صعود/نزول',
-            out: MarketModule.selfTest().out,
-            pass: MarketModule.selfTest().ok
-          },
-          (() => {
-            let r;
-            try {
-              const at = NotifyModule.atMs('1405/07/26', '09:30', 0);
-              const okAt = at === new Date(2026, 9, 18, 9, 30, 0, 0).getTime();
-              const enc = new TextEncoder();
-              const folded = IcsExport.fold('ب'.repeat(120)).split('\r\n').every(l => enc.encode(l).length <= 75);
-              const ics = IcsExport.build();
-              const okIcs = ics.text.indexOf('BEGIN:VCALENDAR') === 0 && ics.text.trim().slice(-13) === 'END:VCALENDAR' &&
-                (ics.text.match(/BEGIN:VEVENT/g) || []).length === (ics.text.match(/END:VEVENT/g) || []).length;
-              r = { ok: okAt && folded && okIcs, out: `زمان‌بندی=${okAt} | تا‌کردن خطوط=${folded} | ICS=${okIcs} (${ics.count} مورد)` };
-            } catch (e) { r = { ok: false, out: String(e) }; }
-            return { title: 'اعلان‌ها (v4.9): زمان‌بندی دقیق، آلارم تقویم و ساختار ICS', out: r.out, pass: r.ok };
-          })()
-        ];
-        document.getElementById('selfTestTableBody').innerHTML = tests.map((t, i) => `
-          <tr>
-            <td>${Fmt.toFa(i + 1)}</td>
-            <td><strong>${t.title}</strong></td>
-            <td style="direction:ltr; text-align:left; font-family:monospace;">${t.out}</td>
-            <td><span class="badge ${t.pass ? 'badge-success' : 'badge-danger'}">${t.pass ? 'PASS' : 'FAIL'}</span></td>
-          </tr>
-        `).join('');
-      }
-
       /* INITIALIZATION & EVENT LISTENERS */
       document.addEventListener('DOMContentLoaded', function () {
         SafeStorage.init();
@@ -4417,7 +4344,6 @@
         populatePhysicalUnits();
         renderCalendarGrid();
         renderAllNotesView();
-        runSelfTests();
 
         /* -------------------------------------------------------------------
            INLINE PICKERS: every [data-picker] field gets typing + inline panel
@@ -5089,7 +5015,6 @@
           if (AppState.settings.notifyEnabled && n > 0 && !(wiz && wiz.classList.contains('open'))) toast(`🔔 ${Fmt.toFa(n)} اعلان فعال دارید`);
         }, 900);
 
-        document.getElementById('btnReRunTests').addEventListener('click', () => { runSelfTests(); toast('تست‌ها با موفقیت اجرا شدند'); });
       });
     })();
   </script>

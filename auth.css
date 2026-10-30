@@ -88,3 +88,12 @@ html.auth-pending body > :not(#authRoot) { display: none !important; }
 .au-link { min-height: 40px; }
 .au-card h1:focus { outline: none; }
 .au-card :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 8px; }
+
+/* دو مرحله‌ای و نشست‌ها */
+.au-qr { display: flex; justify-content: center; margin: 6px 0 10px; }
+.au-qr img { background: #fff; padding: 8px; border-radius: 12px; border: 1px solid var(--border-color); }
+.au-secret { font-family: 'Courier New', Consolas, monospace; font-size: .9rem; font-weight: 700; letter-spacing: .08em; background: var(--bg-hover); border-radius: var(--radius-sm); padding: 10px 12px; margin: 6px 0 4px; word-break: break-all; user-select: all; -webkit-user-select: all; }
+.au-sesslist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.au-sess { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 12px; }
+.au-sess-n { font-weight: 800; font-size: .88rem; }
+.au-badge { font-size: .72rem; font-weight: 800; color: var(--primary-text); background: var(--primary-soft); border-radius: 99px; padding: 4px 10px; white-space: nowrap; }
