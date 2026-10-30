@@ -1,7 +1,7 @@
 // File: sw.js | Version: 1.3.0 | Date: 2026-10-26
 // سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها (در صورت پشتیبانی مرورگر)
 // قیمت‌های بازار هرگز ذخیره نمی‌شوند و همیشه مستقیم از اینترنت می‌آیند.
-const CACHE = 'emp-desk-v5.2.0';
+const CACHE = 'emp-desk-v5.3.0';
 const DIGEST_CACHE = 'emp-digest-v49';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 // فایل‌های ورود/ثبت‌نام؛ اگر یکی در دسترس نبود نصب سرویس‌ورکر خراب نشود

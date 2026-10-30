@@ -2846,6 +2846,7 @@
         return Fmt.dateKey(t.jy, t.jm, t.jd);
       }
       function openSettingsCat(cat) {
+        try { sessionStorage.setItem('emp_setcat', cat); } catch (e) {}
         document.querySelectorAll('.set-cat').forEach(b => b.setAttribute('aria-selected', b.getAttribute('data-setcat') === cat ? 'true' : 'false'));
         document.querySelectorAll('.set-panel').forEach(p => p.classList.toggle('active', p.getAttribute('data-setpanel') === cat));
       }
@@ -3641,7 +3642,9 @@
         document.querySelectorAll('.view-pane').forEach(p => {
           p.classList.toggle('active', p.id === targetId);
         });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.__curView = targetId;
+        try { sessionStorage.setItem('emp_view', targetId); history.replaceState(null, '', '#' + targetId); } catch (e) {}
+        window.scrollTo({ top: 0, behavior: window.__restoring ? 'auto' : 'smooth' });
       }
 
       function applySettings() {
@@ -4984,7 +4987,20 @@
             if (e.data && e.data.type === 'open-view' && e.data.view && document.getElementById(e.data.view)) switchView(e.data.view);
           });
         }
-        if (/^#view-/.test(location.hash) && document.getElementById(location.hash.slice(1))) switchView(location.hash.slice(1));
+        {
+          // بعد از رفرش، در همان بخش (و همان تب تنظیمات و همان جای صفحه) می‌مانیم
+          let want = /^#view-/.test(location.hash) ? location.hash.slice(1) : '';
+          try { if (!want) want = sessionStorage.getItem('emp_view') || ''; } catch (e) {}
+          const navB = want && document.querySelector('.nav-btn[data-view="' + want + '"]');
+          if (navB && document.getElementById(want) && navB.style.display !== 'none') {
+            window.__restoring = true; switchView(want); window.__restoring = false;
+            if (want === 'view-settings') { try { const c = sessionStorage.getItem('emp_setcat'); if (c && document.querySelector('[data-setpanel="' + c + '"]')) openSettingsCat(c); } catch (e) {} }
+            try { const sc = JSON.parse(sessionStorage.getItem('emp_scroll') || 'null'); if (sc && sc.v === want && sc.y > 0) setTimeout(() => window.scrollTo(0, sc.y), 150); } catch (e) {}
+          }
+          const saveScroll = () => { try { sessionStorage.setItem('emp_scroll', JSON.stringify({ v: window.__curView || '', y: Math.round(window.scrollY) })); } catch (e) {} };
+          window.addEventListener('pagehide', saveScroll);
+          document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveScroll(); });
+        }
         if (AppState.settings.notifySystem && NotifyModule.perm() === 'granted') NotifyModule.registerPeriodic();
         setTimeout(maybeAskNotify, 1800);
 

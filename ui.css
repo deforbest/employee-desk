@@ -1,4 +1,4 @@
-/* File: ui.css | Version: 1.0.0 | Date: 2026-10-26
+/* File: ui.css | Version: 1.1.0 | Date: 2026-10-30
    آیکون‌های مینیمال و ظاهر تنظیمات به سبک گروه‌بندی iOS / One UI. */
 .ic { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .btn .ic, .set-cat .ic, .badge .ic { margin-inline-end: 1px; }
@@ -26,3 +26,64 @@
 #acctPanel .acct-note { font-size: .8rem; color: var(--text-secondary); line-height: 1.9; margin: 12px 6px 0; }
 #acctPanel [hidden] { display: none !important; }
 html:not(.has-auth) [data-setcat="account"], html:not(.has-auth) [data-setpanel="account"] { display: none !important; }
+
+/* ===== مبدل: فیلدها هم‌تراز (دسکتاپ) ===== */
+#view-converter .form-grid { align-items: end; }
+#view-converter .field > label { min-height: 28px; }
+
+/* ===== شیشه‌ای و گرد؛ الهام از iOS و تلگرام ===== */
+:root { --glass: rgba(255,255,255,.74); --glass-strong: rgba(255,255,255,.9); --glass-line: rgba(255,255,255,.7); --glass-shadow: 0 10px 32px -8px rgba(15,23,42,.22); --soft-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 28px -14px rgba(15,23,42,.18); }
+[data-theme="dark"] { --glass: rgba(32,36,43,.68); --glass-strong: rgba(32,36,43,.88); --glass-line: rgba(255,255,255,.09); --glass-shadow: 0 10px 32px -8px rgba(0,0,0,.6); --soft-shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.55); }
+[data-theme="dark"][data-dark="amoled"] { --glass: rgba(14,14,16,.66); --glass-strong: rgba(14,14,16,.9); }
+@media (prefers-reduced-transparency: reduce) { :root, [data-theme="dark"] { --glass: var(--bg-surface); --glass-strong: var(--bg-surface); } }
+
+@media (max-width: 820px) {
+  body { background-image: radial-gradient(120% 55% at 100% 0%, color-mix(in srgb, var(--primary) 11%, transparent), transparent 62%); background-attachment: fixed; }
+
+  /* نوار پایین: کپسول شناور شیشه‌ای */
+  .app-layout { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+  .sidebar {
+    left: 12px !important; right: 12px !important; bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    height: 66px !important; padding-bottom: 0 !important; border: 1px solid var(--glass-line) !important; border-radius: 28px !important;
+    background: var(--glass) !important; -webkit-backdrop-filter: blur(26px) saturate(180%); backdrop-filter: blur(26px) saturate(180%);
+    box-shadow: var(--glass-shadow) !important;
+  }
+  .nav-menu { padding: 5px 6px !important; }
+  .nav-btn { border-radius: 22px !important; font-weight: 700; color: var(--text-secondary); transition: background .2s, transform .15s, color .2s; }
+  .nav-btn:active { transform: scale(.94); }
+  .nav-btn.active { background: var(--primary-soft) !important; color: var(--primary-text) !important; }
+
+  /* نوار بالا: شیشهٔ نیمه‌شفاف */
+  .topbar {
+    background: var(--glass) !important; -webkit-backdrop-filter: blur(22px) saturate(170%); backdrop-filter: blur(22px) saturate(170%);
+    border-bottom: 1px solid var(--glass-line) !important; border-radius: 0 0 22px 22px; box-shadow: var(--soft-shadow) !important;
+  }
+
+  /* کارت‌ها و کنترل‌ها */
+  .card { border: 1px solid var(--glass-line); border-radius: 22px; padding: 16px 14px; box-shadow: var(--soft-shadow); }
+  .btn { border-radius: 14px; transition: transform .12s ease, background .2s; }
+  .btn:active { transform: scale(.97); }
+  .input, .select { min-height: 46px; border-radius: 14px; border-color: transparent; background: var(--bg-elevated); }
+  .input:focus, .select:focus { border-color: var(--primary); }
+  .set-cat { border-radius: 99px; }
+  .set-group { border-radius: 22px; box-shadow: var(--soft-shadow); }
+  .set-row { padding: 14px 16px; }
+
+  /* پنجره‌ها: ورقهٔ پایین‌کش با دستگیره */
+  .modal-backdrop, .picker-backdrop { align-items: flex-end; padding: 0; background: rgba(15,23,42,.38); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .modal-box, .touch-picker-card {
+    max-width: none; width: 100%; max-height: 90vh; border-radius: 30px 30px 0 0; border-width: 1px 0 0; border-color: var(--glass-line);
+    padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+    background: var(--glass-strong); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+    transform: translateY(100%) !important; transition: transform .4s cubic-bezier(.32,.72,0,1), opacity .25s ease;
+  }
+  .modal-box::before, .touch-picker-card::before { content: ''; display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--border-color); opacity: .8; margin: 0 auto 14px; }
+  .modal-backdrop.open .modal-box, .picker-backdrop.open .touch-picker-card { transform: translateY(0) !important; }
+  .modal-backdrop.closing .modal-box, .picker-backdrop.closing .touch-picker-card { transform: translateY(100%) !important; }
+
+  /* اعلان‌ها و پیام‌ها */
+  .notif-panel { border-radius: 24px; background: var(--glass-strong); -webkit-backdrop-filter: blur(26px); backdrop-filter: blur(26px); border: 1px solid var(--glass-line); box-shadow: var(--glass-shadow); bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
+  .notif-ask { border-radius: 22px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; background: var(--glass-strong); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  .toast-container { left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); align-items: center; }
+  .toast { border-radius: 99px; padding: 10px 18px; background: var(--glass-strong); color: var(--text-primary); border: 1px solid var(--glass-line); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: var(--glass-shadow); }
+}

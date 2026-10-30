@@ -1,4 +1,4 @@
-/* File: auth.js | Version: 1.3.0 | Date: 2026-10-29
+/* File: auth.js | Version: 1.4.0 | Date: 2026-10-30
    ورود و ثبت‌نام: ایمیل + کد تأیید (+ رمز اختیاری)، گوگل، گیت‌هاب، تلگرام، شماره تلفن (از راه ربات تلگرام).
    سرور: Supabase (طرح رایگان). در این فایل هیچ کلید محرمانه‌ای نیست؛ فقط آدرس پروژه و کلید عمومی (anon) از config.js خوانده می‌شود.
    اتصال هوشمند: اگر آدرس پروکسی (SUPABASE_PROXY_URL) تعریف شده باشد، برنامه خودش سریع‌ترین مسیر در دسترس را انتخاب می‌کند. */
@@ -137,9 +137,10 @@
         <div class="au-pw"><input class="input au-ltr" id="auPwd" type="password" enterkeyhint="go" autocomplete="current-password" maxlength="128">
           <button type="button" class="btn btn-secondary btn-sm" data-act="togglepw" data-target="auPwd" aria-label="نمایش رمز">نمایش</button></div>
       </div>
-      <button type="submit" class="btn btn-primary au-block" id="auGo">دریافت کد</button>
+      <button type="submit" class="btn btn-primary au-block" id="auGo">ادامه</button>
     </form>
-    <div class="au-row"><button type="button" class="au-link" id="auMode" data-act="mode">رمز عبور دارم</button><button type="button" class="au-link" id="auForgot" data-act="forgot" hidden>رمزم را فراموش کرده‌ام</button></div>
+    <button type="button" class="btn btn-secondary au-block" id="auSendCode" data-act="sendcode" hidden>ارسال کد به ایمیلم</button>
+    <div class="au-row"><button type="button" class="au-link" id="auMode" data-act="mode">رمز عبور دارم</button><button type="button" class="au-link" id="auForgot" data-act="forgot" hidden>فراموشی رمز</button></div>
     <div id="auSocialBox" hidden><div class="au-or"><span>یا ادامه با</span></div><div class="au-social" id="auSocial"></div></div>
     <div class="au-row" style="justify-content:center"><button type="button" class="au-link" data-act="guest" id="auGuest" hidden>ادامه بدون حساب کاربری</button></div>
   </section>
@@ -258,10 +259,18 @@
   /* ---------- ورود با ایمیل ---------- */
   function setMode(m) {
     S.mode = m;
-    $('auPwdBox').hidden = m !== 'pwd'; $('auForgot').hidden = m !== 'pwd';
-    $('auGo').textContent = m === 'pwd' ? 'ورود' : 'دریافت کد';
-    $('auMode').textContent = m === 'pwd' ? 'ورود بدون رمز (با کد ایمیل)' : 'رمز عبور دارم';
-    $('auEmailHint').textContent = m === 'pwd' ? 'ایمیل و رمز عبورتان را بنویسید.' : 'یک کد ' + toFa(OTP_LEN) + ' رقمی برایتان می‌فرستیم. ساخت رمز لازم نیست.';
+    const pw = m === 'pwd';
+    $('auPwdBox').hidden = !pw; $('auForgot').hidden = !pw; $('auSendCode').hidden = !pw; $('auMode').hidden = pw;
+    $('auGo').textContent = pw ? 'ورود' : 'ادامه';
+    $('auTitle').textContent = pw ? 'رمز عبور را بنویسید' : 'ایمیل‌تان را بنویسید';
+    $('auEmailHint').textContent = pw ? 'برای این ایمیل رمز عبور تعیین شده است.' : 'اگر قبلاً رمز گذاشته‌اید، رمز را می‌پرسیم؛ وگرنه یک کد ' + toFa(OTP_LEN) + ' رقمی می‌فرستیم.';
+    $('auPwd').autocomplete = 'current-password';
+  }
+  // تشخیص هوشمند: رمز دارد یا نه؟ (جواب فقط password / code / limited؛ ایمیل ناموجود هم code است)
+  async function getHint(email) {
+    const { data, error } = await sb.rpc('signin_hint', { p_email: email });
+    if (error) { if (/PGRST202|Could not find|does not exist/i.test(String(error.code) + String(error.message))) return 'code'; throw error; }
+    return data === 'password' || data === 'limited' ? data : 'code';
   }
   async function sendCode(email) {
     const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
@@ -270,7 +279,7 @@
     $('auSentTo').textContent = email; $('auCode').value = ''; show('code'); startCooldown(60);
     status('کد ارسال شد. ایمیل خود را بررسی کنید.'); return true;
   }
-  $('auEmail').addEventListener('input', e => { const f = loadFlow(); if (!f || f.step !== 'code') saveFlow({ step: 'email', email: e.target.value.slice(0, 254), at: Date.now() }); });
+  $('auEmail').addEventListener('input', e => { if (S.mode === 'pwd' && normEmail(e.target.value) !== S.hintEmail) setMode('otp'); const f = loadFlow(); if (!f || f.step !== 'code') saveFlow({ step: 'email', email: e.target.value.slice(0, 254), at: Date.now() }); });
   $('auEmailForm').addEventListener('submit', e => {
     e.preventDefault();
     const email = normEmail($('auEmail').value);
@@ -282,7 +291,18 @@
         if (error) return msg(errText(error));
         $('auPwd').value = ''; await gate(data.user, () => enter(data.user, true));
       }, 'در حال ورود…');
-    } else { S.forgot = false; run(() => sendCode(email), 'در حال ارسال کد… لطفاً صبر کنید'); }
+    } else {
+      run(async () => {
+        const hint = await getHint(email);
+        if (hint === 'password' || hint === 'limited') {
+          S.hintEmail = email; setMode('pwd'); $('auPwd').value = '';
+          status(hint === 'limited' ? 'تعداد بررسی‌ها زیاد بود. رمز را بنویسید یا کد بخواهید.' : 'رمز عبور را بنویسید. اگر نمی‌خواهید، «ارسال کد به ایمیلم» را بزنید.');
+          setTimeout(() => { try { $('auPwd').focus(); } catch (x) {} }, 80);
+          return;
+        }
+        S.forgot = false; await sendCode(email); // رمز ندارد (یا حساب تازه است): کد خودکار ارسال می‌شود
+      }, 'در حال بررسی…');
+    }
   });
   function startCooldown(sec) {
     S.cool = Math.max(0, sec); clearInterval(S.timer);
@@ -592,7 +612,8 @@
     const t = e.target.closest('[data-act]'); if (!t) return;
     const a = t.dataset.act;
     if (a === 'reload') location.reload();
-    else if (a === 'mode') setMode(S.mode === 'pwd' ? 'otp' : 'pwd');
+    else if (a === 'mode') { S.hintEmail = normEmail($('auEmail').value); setMode('pwd'); setTimeout(() => { try { $('auPwd').focus(); } catch (x) {} }, 60); }
+    else if (a === 'sendcode') { const em = normEmail($('auEmail').value); if (!em) return msg('ابتدا ایمیل را بنویسید.'); S.forgot = false; run(() => sendCode(em), 'در حال ارسال کد… لطفاً صبر کنید'); }
     else if (a === 'forgot') { const em = normEmail($('auEmail').value); if (!em) return msg('ابتدا ایمیل را بنویسید.'); S.forgot = true; run(() => sendCode(em), 'در حال ارسال کد… لطفاً صبر کنید'); }
     else if (a === 'togglepw') { const i = $(t.dataset.target); const s = i.type === 'password'; i.type = s ? 'text' : 'password'; t.textContent = s ? 'پنهان' : 'نمایش'; }
     else if (a === 'resend') { if (S.cool <= 0) run(() => sendCode(S.email), 'در حال ارسال دوبارهٔ کد…'); }
