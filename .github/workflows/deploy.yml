@@ -73,6 +73,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PROXY_URL: ${{ vars.SUPABASE_PROXY_URL }}
+          HIDE_ORIGIN: ${{ vars.HIDE_ORIGIN }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
           ENABLE_GOOGLE: ${{ vars.ENABLE_GOOGLE }}
