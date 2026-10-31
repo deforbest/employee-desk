@@ -1,4 +1,4 @@
-<!-- File: index.html | Version: 5.0.0-Auth | Date: 2026-10-25 -->
+<!-- File: index.html | Version: 5.1.0 | Date: 2026-11-01 -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" data-theme="light" data-accent="teal">
 <head>
@@ -616,6 +616,42 @@
   <!-- ورود و ثبت‌نام (v5.0): config.js هنگام انتشار از Secrets/Variables گیت‌هاب ساخته می‌شود -->
   <script src="config.js"></script>
   <script>if (window.APP_CONFIG && (window.APP_CONFIG.SUPABASE_URL || window.APP_CONFIG.SUPABASE_PROXY_URL)) document.documentElement.classList.add('auth-pending', 'has-auth');</script>
+  <script>
+  /* پل نسخهٔ اندروید (نصبی): اعلان بومی و خواندن کلیپ‌بورد. در مرورگر معمولی هیچ کاری نمی‌کند. */
+  (function () {
+    try {
+      var C = window.Capacitor;
+      if (!(C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() && C.Plugins && C.Plugins.SmsReader)) return;
+      var N = C.Plugins.SmsReader;
+      // کلیپ‌بورد: خواندن با جاوااسکریپت در وب‌ویو مسدود است؛ از افزونهٔ بومی خوانده می‌شود
+      if (!navigator.clipboard) { try { Object.defineProperty(navigator, 'clipboard', { value: {}, configurable: true }); } catch (e) {} }
+      if (navigator.clipboard) {
+        var origRead = typeof navigator.clipboard.readText === 'function' ? navigator.clipboard.readText.bind(navigator.clipboard) : null;
+        navigator.clipboard.readText = function () {
+          return N.readClipboard().then(function (r) { return (r && r.text) || ''; }).catch(function () {
+            if (origRead) return origRead();
+            throw new Error('clipboard');
+          });
+        };
+      }
+      // اعلان: وب‌ویوی اندروید شیء اعلان مرورگر را ندارد؛ جایگزین بومی
+      var perm = 'default';
+      var map = function (st) { return st === 'granted' ? 'granted' : (st === 'denied' ? 'denied' : 'default'); };
+      N.checkNotificationPermission().then(function (r) { perm = map(r && r.state); }).catch(function () {});
+      function NativeNotification(title, opts) {
+        opts = opts || {};
+        N.showNotification({ title: String(title || 'میز کار'), body: String(opts.body || '') }).catch(function () {});
+      }
+      Object.defineProperty(NativeNotification, 'permission', { get: function () { return perm; } });
+      NativeNotification.requestPermission = function (cb) {
+        return N.requestNotificationPermission().then(function (r) { perm = map(r && r.state); return perm; })
+          .catch(function () { perm = 'denied'; return perm; })
+          .then(function (p) { if (typeof cb === 'function') cb(p); return p; });
+      };
+      window.Notification = NativeNotification;
+    } catch (e) {}
+  })();
+  </script>
   <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="auth.css">
 </head>
@@ -2130,6 +2166,17 @@
         },
         removeTransaction(id) {
           this.saveTransactions(this.getTransactions().filter(t => t.id !== id));
+        },
+        updateTransaction(id, patch) { // ویرایش عنوان، مبلغ، نوع و بانک یک تراکنش ثبت‌شده
+          const list = this.getTransactions();
+          const t = list.find(x => x.id === id);
+          if (!t || !patch) return false;
+          if (patch.amount != null) { const a = Math.round(Number(patch.amount) || 0); if (a <= 0) return false; t.amount = a; }
+          if (patch.type) t.type = patch.type === 'income' ? 'income' : 'expense';
+          if (patch.title != null) { const ti = String(patch.title).trim().slice(0, 80); if (ti) t.title = ti; }
+          if (patch.bank != null) t.bank = String(patch.bank).slice(0, 30);
+          this.saveTransactions(list);
+          return true;
         },
         getMonthSummary(jy, jm) {
           const prefix = `${jy}/${Fmt.pad2(jm)}/`;
@@ -3961,6 +4008,8 @@
       window.EmpFinance = {
         add: o => FinanceModule.addTransactionEx(o),
         has: fp => FinanceModule.getTransactions().some(t => t.fp === fp),
+        get: id => FinanceModule.getTransactions().find(t => t.id === id) || null,
+        update: (id, patch) => FinanceModule.updateTransaction(id, patch),
         refresh: () => { try { renderCalendarGrid(); } catch (e) {} try { renderFinanceView(); } catch (e) {} },
         sep: n => Fmt.sepFa(n), toFa: s => Fmt.toFa(s), toast: m => toast(m), todayKey: () => TODAY_KEY
       };
@@ -4130,6 +4179,7 @@
                 <div style="display:flex; align-items:center; gap:8px;">
                   <strong style="direction:ltr; color:${isInc ? 'var(--success)' : 'var(--danger)'};">${Fmt.sepFa(t.amount)} ریال</strong>
                   <button type="button" class="btn btn-secondary btn-xs" data-copy-tx="${t.amount}">📋 کپی</button>
+                  <button type="button" class="btn btn-secondary btn-xs" data-edit-tx="${Fmt.esc(t.id)}">ویرایش</button>
                   <button type="button" class="btn btn-danger btn-xs" data-del-tx="${t.id}">حذف</button>
                 </div>
               </div>
@@ -4642,6 +4692,11 @@
           const copyBtn = e.target.closest('[data-copy-tx]');
           if (copyBtn) {
             ClipboardHelper.copyText(copyBtn.getAttribute('data-copy-tx'), 'مبلغ تراکنش');
+            return;
+          }
+          const editBtn = e.target.closest('[data-edit-tx]');
+          if (editBtn) {
+            if (window.EmpSms && window.EmpSms.editTx) window.EmpSms.editTx(editBtn.getAttribute('data-edit-tx'));
             return;
           }
           const delBtn = e.target.closest('[data-del-tx]');
