@@ -1,0 +1,119 @@
+# File: .github/workflows/android.yml | Version: 1.0.0 | Date: 2026-11-01
+# ساخت فایل نصبی اندروید (APK) رایگان روی گیت‌هاب. دستی اجرا می‌شود: Actions ← Build Android APK ← Run workflow.
+# برنامه داخل APK بسته‌بندی می‌شود (نه بارگذاری از اینترنت)، پس کدی که اجازهٔ خواندن پیامک دارد همان کد امضاشده است.
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      CAP_VERSION: 6.1.2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Vendor supabase-js (pinned)
+        run: |
+          mkdir -p vendor
+          npm pack @supabase/supabase-js@2.45.4 --silent
+          tar -xzf ./*.tgz package/dist/umd/supabase.js
+          mv package/dist/umd/supabase.js vendor/supabase.js
+          rm -rf package ./*.tgz
+
+      - name: Build config.js
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PROXY_URL: ${{ vars.SUPABASE_PROXY_URL }}
+          HIDE_ORIGIN: ${{ vars.HIDE_ORIGIN }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
+          ENABLE_GOOGLE: "false"
+          ENABLE_GITHUB: "false"
+          ALLOW_GUEST: ${{ vars.ALLOW_GUEST }}
+          OTP_LENGTH: ${{ vars.OTP_LENGTH }}
+        run: node scripts/make-config.js
+
+      - name: Assemble web files
+        run: |
+          mkdir www
+          cp index.html manifest.webmanifest auth.js auth.css icons.js ui.css sms-parser.js sms-ui.js config.js icon-192.png icon-512.png icon-maskable-512.png www/
+          cp -r vendor www/vendor
+
+      - name: Create Capacitor Android project
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @capacitor/core@$CAP_VERSION @capacitor/cli@$CAP_VERSION @capacitor/android@$CAP_VERSION
+          cp android-app/capacitor.config.json capacitor.config.json
+          npx cap add android
+          PKG=android/app/src/main/java/com/deforbest/employeedesk
+          mkdir -p "$PKG"
+          cp android-app/SmsReaderPlugin.java android-app/MainActivity.java "$PKG"/
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.READ_SMS" />\n</manifest>#' "$M"
+          sed -i 's/android:allowBackup="true"/android:allowBackup="false"/' "$M"
+          grep -q READ_SMS "$M"
+
+      - name: App icon
+        run: |
+          RES=android/app/src/main/res
+          rm -rf "$RES"/mipmap-anydpi-v26
+          for d in "mdpi 48" "hdpi 72" "xhdpi 96" "xxhdpi 144" "xxxhdpi 192"; do
+            set -- $d
+            mkdir -p "$RES/mipmap-$1"
+            convert icon-512.png -resize ${2}x${2} "$RES/mipmap-$1/ic_launcher.png"
+            cp "$RES/mipmap-$1/ic_launcher.png" "$RES/mipmap-$1/ic_launcher_round.png"
+            cp "$RES/mipmap-$1/ic_launcher.png" "$RES/mipmap-$1/ic_launcher_foreground.png"
+          done
+
+      - name: Sync web files and set version
+        run: |
+          npx cap sync android
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"5.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Sign APK
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          UNSIGNED=$(ls android/app/build/outputs/apk/release/*.apk | head -1)
+          "$BT/zipalign" -p 4 "$UNSIGNED" aligned.apk
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ] && [ -n "$KS_ALIAS" ]; then
+            echo "$KS_B64" | base64 -d > release.jks
+            ALIAS="$KS_ALIAS"; PASS="$KS_PASS"
+            echo "Signing with your permanent key."
+          else
+            PASS=$(openssl rand -hex 16); ALIAS=emp
+            keytool -genkeypair -keystore release.jks -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=EmployeeDesk"
+            echo "::warning::No permanent signing key set. This APK is signed with a temporary key; to update the app later you must uninstall the old one first."
+          fi
+          "$BT/apksigner" sign --ks release.jks --ks-pass "pass:$PASS" --key-pass "pass:$PASS" --ks-key-alias "$ALIAS" --out EmployeeDesk.apk aligned.apk
+          "$BT/apksigner" verify EmployeeDesk.apk
+          rm -f release.jks
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk
+          name: "فایل نصبی اندروید"
+          body: "آخرین نسخهٔ فایل نصبی. شمارهٔ ساخت: ${{ github.run_number }}"
+          files: EmployeeDesk.apk
+          make_latest: true
