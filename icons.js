@@ -1,4 +1,4 @@
-/* File: icons.js | Version: 1.0.0 | Date: 2026-10-26
+/* File: icons.js | Version: 1.1.0-Phase2 | Date: 2026-10-31
    آیکون‌های مینیمال تک‌رنگ (سبک خطی، شبیه سامسونگ/آیفون) به‌جای ایموجی‌ها.
    همهٔ ایموجی‌های داخل صفحه (حتی متن‌هایی که بعداً با جاوااسکریپت ساخته می‌شوند) خودکار به آیکون تبدیل می‌شوند. */
 (function () {
@@ -46,6 +46,11 @@
     coffee: '<path d="M5 9h11v5a4 4 0 01-4 4H9a4 4 0 01-4-4z"/><path d="M16 10h1.5a2 2 0 010 4H16M8 4v2M12 4v2"/>',
     briefcase: '<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7M3 13h18"/>',
     gift: '<rect x="4" y="9" width="16" height="11" rx="2.5"/><path d="M12 9v11M3 9h18M12 9c-2.5 0-3.8-1-3.8-2.5S10.5 4.5 12 9zM12 9c2.5 0 3.8-1 3.8-2.5S13.5 4.5 12 9z"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 018 0v4"/>',
+    unlock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 017.4-2"/>',
+    shield: '<path d="M12 3l7 3v5c0 5-3.2 8.5-7 10-3.8-1.5-7-5-7-10V6z"/><path d="M9.5 12l2 2 3.5-3.5"/>',
+    sms: '<path d="M4 5.5h16a2 2 0 012 2v8a2 2 0 01-2 2H9l-4.5 3.5V17.5H4a2 2 0 01-2-2v-8a2 2 0 012-2z"/><path d="M8 10h8M8 13h5"/>',
+    grad: '<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11.5v5c0 1.8 2.7 3.2 6 3.2s6-1.4 6-3.2v-5"/>',
     x: '<path d="M6 6l12 12M18 6L6 18"/>'
   };
   const M = {
@@ -57,7 +62,7 @@
     '🛠': 'sliders', '⚙': 'sliders', '⬇': 'download', '⬆': 'upload', '📊': 'chart', '📈': 'trend',
     '🥇': 'medal', '🥈': 'medal', '👤': 'user', '🎨': 'palette', '♿': 'access', '🏢': 'building',
     '🏭': 'building', '🛒': 'cart', '🚗': 'car', '🏠': 'home', '🏥': 'medical', '☕': 'coffee',
-    '💼': 'briefcase', '🎁': 'gift', '✕': 'x'
+    '💼': 'briefcase', '🎁': 'gift', '🔒': 'lock', '🔐': 'lock', '🔑': 'lock', '🔓': 'unlock', '🛡': 'shield', '📩': 'sms', '🎓': 'grad', '☑': 'check-circle', '✕': 'x'
   };
   const RE = new RegExp('(?:' + Object.keys(M).join('|') + ')\\uFE0F?', 'gu');
   const REO = new RegExp('(?:' + Object.keys(M).join('|') + ')\\uFE0F?\\s?', 'gu'); // برای حذف کامل (option و اعلان‌ها)

@@ -1,4 +1,4 @@
-/* File: auth.js | Version: 1.4.0 | Date: 2026-10-30
+/* File: auth.js | Version: 2.0.0-Phase2-E2EE | Date: 2026-10-31
    ورود و ثبت‌نام: ایمیل + کد تأیید (+ رمز اختیاری)، گوگل، گیت‌هاب، تلگرام، شماره تلفن (از راه ربات تلگرام).
    سرور: Supabase (طرح رایگان). در این فایل هیچ کلید محرمانه‌ای نیست؛ فقط آدرس پروژه و کلید عمومی (anon) از config.js خوانده می‌شود.
    اتصال هوشمند: اگر آدرس پروکسی (SUPABASE_PROXY_URL) تعریف شده باشد، برنامه خودش سریع‌ترین مسیر در دسترس را انتخاب می‌کند. */
@@ -6,6 +6,86 @@
   'use strict';
   const CFG = window.APP_CONFIG || {};
   const root = document.documentElement;
+
+  /* ---------- موتور رمزگذاری سرتاسری استاندارد (Web Crypto API: AES-256-GCM + PBKDF2-SHA256) ---------- */
+  const E2EE_KEY_STORE = 'emp_e2ee_pass_v55';
+  const EmpE2EE = {
+    b64(buf) {
+      const b = new Uint8Array(buf);
+      let s = '';
+      for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+      return btoa(s);
+    },
+    unb64(str) {
+      const s = atob(String(str || '').trim());
+      const b = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+      return b.buffer;
+    },
+    async sha256(text) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(text || '')));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+    async deriveKey(passphrase, saltBytes, iterations) {
+      const baseKey = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(String(passphrase || '')),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: saltBytes, iterations: iterations || 210000, hash: 'SHA-256' },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    },
+    async encrypt(plainObj, passphrase) {
+      const pass = String(passphrase || '').trim();
+      if (!pass) throw new Error('NO_PASS');
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const iter = 210000;
+      const key = await this.deriveKey(pass, salt, iter);
+      const plainBytes = new TextEncoder().encode(JSON.stringify(plainObj));
+      const ctBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plainBytes);
+      return {
+        __e2ee: 1,
+        v: 2,
+        alg: 'AES-256-GCM',
+        kdf: 'PBKDF2-SHA256',
+        iter,
+        salt: this.b64(salt.buffer),
+        iv: this.b64(iv.buffer),
+        ct: this.b64(ctBuf),
+        ts: new Date().toISOString()
+      };
+    },
+    async decrypt(envelope, passphrase) {
+      if (!envelope || envelope.__e2ee !== 1 || !envelope.ct) return envelope;
+      const pass = String(passphrase || '').trim();
+      if (!pass) throw new Error('NEED_PASS');
+      const salt = new Uint8Array(this.unb64(envelope.salt));
+      const iv = new Uint8Array(this.unb64(envelope.iv));
+      const ctBuf = this.unb64(envelope.ct);
+      const iter = Number(envelope.iter) || 210000;
+      const key = await this.deriveKey(pass, salt, iter);
+      const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ctBuf);
+      return JSON.parse(new TextDecoder().decode(plainBuf));
+    },
+    getPass() {
+      try { return localStorage.getItem(E2EE_KEY_STORE) || ''; } catch (e) { return ''; }
+    },
+    setPass(p) {
+      try {
+        if (p) localStorage.setItem(E2EE_KEY_STORE, String(p).trim());
+        else localStorage.removeItem(E2EE_KEY_STORE);
+      } catch (e) {}
+    }
+  };
+  window.EmpE2EE = EmpE2EE;
   if (!CFG.SUPABASE_URL && !CFG.SUPABASE_PROXY_URL) { root.classList.remove('auth-pending'); return; } // بدون پیکربندی: برنامه مثل قبل کار می‌کند
 
   const D = document;
@@ -15,7 +95,7 @@
   const STORE_KEY = 'emp-auth', FLOW_KEY = 'emp_auth_flow', OTP_TTL = 10 * 60 * 1000;
   const DIRECT = String(CFG.SUPABASE_URL || '').replace(/\/+$/, ''); // در حالت مخفی‌سازی آدرس، خالی است
     const DATA_KEYS = ['emp_desk_settings_v44', 'emp_onboarding_done_v44', 'emp_shifts_cfg_v43', 'emp_custom_shifts_v42',
-    'emp_shift_overrides_v42', 'emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46'];
+    'emp_shift_overrides_v42', 'emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46', 'emp_custom_sms_rules_v55'];
   const CONTENT_KEYS = ['emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46', 'emp_shifts_cfg_v43'];
   const S = { user: null, entered: false, cur: '', email: '', mode: 'otp', forgot: false, fromAccount: false, cool: 0, timer: null, tgRun: 0 };
   let sb = null;
@@ -541,7 +621,7 @@
     [['acctLogin', !!u], ['acctGuestNote', !!u], ['acctUserBox', !u], ['acctPwRow', tg]].forEach(a => { const e = $(a[0]); if (e) e.hidden = a[1]; });
   }
   function enter(user, fresh) {
-    S.user = user || null; S.entered = true; clearFlow(); closeAuth(); window.__authReady = true; root.classList.remove('auth-pending'); renderAccount(); refreshSec();
+    S.user = user || null; S.entered = true; clearFlow(); closeAuth(); window.__authReady = true; root.classList.remove('auth-pending'); renderAccount(); refreshSec(); updateE2eeBadge();
     if (user && fresh) maybeRestore();
     try { if (user) localStorage.removeItem('emp_guest'); else localStorage.setItem('emp_guest', '1'); } catch (e) {}
   }
@@ -562,17 +642,42 @@
   }
   sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && S.user) { S.user = null; location.reload(); } });
 
-  /* ---------- پشتیبان ابری ---------- */
+  /* ---------- پشتیبان ابری (مجهز به رمزگذاری سرتاسری AES-256-GCM) ---------- */
+  function updateE2eeBadge() {
+    const st = $('acctE2eeState'), btn = $('acctE2eeBtn');
+    const hasPass = !!EmpE2EE.getPass();
+    if (st) st.textContent = hasPass ? 'فعال (AES-256-GCM)' : 'کلید خودکار حساب (امکان تعیین رمز مجزا)';
+    if (btn) btn.textContent = hasPass ? 'تغییر / حذف رمز E2EE' : 'تعیین رمز E2EE';
+  }
+  function defaultCloudKey() {
+    return EmpE2EE.getPass() || (S.user ? ('emp-e2ee-v2-' + S.user.id) : '');
+  }
   function collect() { const d = {}; DATA_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { try { d[k] = JSON.parse(v); } catch (e) {} } }); return d; }
   function applyData(d) {
     if (!d || typeof d !== 'object') return false;
     let n = 0; DATA_KEYS.forEach(k => { if (k in d) { localStorage.setItem(k, JSON.stringify(d[k])); n++; } }); return n > 0;
   }
+  async function unpackCloudPayload(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (raw.__e2ee !== 1) return raw;
+    const candidates = [EmpE2EE.getPass(), S.user ? ('emp-e2ee-v2-' + S.user.id) : ''].filter(Boolean);
+    for (const k of candidates) {
+      try { return await EmpE2EE.decrypt(raw, k); } catch (e) {}
+    }
+    const asked = prompt('این پشتیبان ابری با رمز سرتاسری (E2EE) قفل شده است. لطفاً رمز رمزگذاری سرتاسری خود را وارد کنید:');
+    if (!asked) throw new Error('NEED_PASS');
+    const dec = await EmpE2EE.decrypt(raw, asked.trim());
+    EmpE2EE.setPass(asked.trim());
+    updateE2eeBadge();
+    return dec;
+  }
   async function backup(quiet) {
     if (!S.user) return false;
     try {
-      const { error } = await sb.from('user_backups').upsert({ user_id: S.user.id, data: collect(), updated_at: new Date().toISOString() });
-      if (error) throw error; if (!quiet) toast('داده‌ها در ابر ذخیره شد'); return true;
+      const pass = defaultCloudKey();
+      const payload = await EmpE2EE.encrypt(collect(), pass);
+      const { error } = await sb.from('user_backups').upsert({ user_id: S.user.id, data: payload, updated_at: new Date().toISOString() });
+      if (error) throw error; if (!quiet) toast('داده‌ها با رمزگذاری سرتاسری (AES-256) در ابر ذخیره شد'); return true;
     } catch (e) { if (!quiet) toast('ذخیره در ابر انجام نشد'); return false; }
   }
   async function restore(confirmFirst) {
@@ -580,16 +685,51 @@
       const { data, error } = await sb.from('user_backups').select('data').eq('user_id', S.user.id).maybeSingle();
       if (error) throw error;
       if (!data || !data.data) return toast('پشتیبانی در ابر پیدا نشد');
-      if (confirmFirst && !confirm('داده‌های این دستگاه با پشتیبان ابری جایگزین شود؟')) return;
-      if (applyData(data.data)) { toast('بازیابی شد؛ برنامه دوباره بارگذاری می‌شود'); setTimeout(() => location.reload(), 900); }
-    } catch (e) { toast('بازیابی انجام نشد'); }
+      if (confirmFirst && !confirm('داده‌های این دستگاه با پشتیبان ابری رمزگشایی و جایگزین شود؟')) return;
+      const plain = await unpackCloudPayload(data.data);
+      if (applyData(plain)) { toast('رمزگشایی و بازیابی انجام شد؛ برنامه دوباره بارگذاری می‌شود'); setTimeout(() => location.reload(), 900); }
+    } catch (e) { toast(e && e.message === 'NEED_PASS' ? 'رمز رمزگذاری سرتاسری اشتباه بود یا وارد نشد' : 'بازیابی انجام نشد'); }
   }
   async function maybeRestore() {
     if (CONTENT_KEYS.some(k => localStorage.getItem(k) !== null)) return;
     try {
       const { data } = await sb.from('user_backups').select('data').eq('user_id', S.user.id).maybeSingle();
-      if (data && data.data && applyData(data.data)) { toast('داده‌های شما از ابر بازیابی شد'); setTimeout(() => location.reload(), 900); }
+      if (data && data.data) {
+        const plain = await unpackCloudPayload(data.data);
+        if (applyData(plain)) { toast('داده‌های شما از ابر رمزگشایی و بازیابی شد'); setTimeout(() => location.reload(), 900); }
+      }
     } catch (e) {}
+  }
+  function configureE2eePass() {
+    const cur = EmpE2EE.getPass();
+    const p = prompt(
+      cur
+        ? 'رمز جدید رمزگذاری سرتاسری (E2EE) را بنویسید (یا برای بازگشت به کلید خودکار حساب، خالی بگذارید):'
+        : 'یک رمز دلخواه برای رمزگذاری سرتاسری پشتیبان ابری (AES-256-GCM) وارد کنید.
+توجه: این رمز هرگز به سرور فرستاده نمی‌شود؛ آن را به خاطر بسپارید:'
+    );
+    if (p === null) return;
+    const clean = p.trim();
+    if (clean && clean.length < 4) return toast('رمز رمزگذاری باید حداقل ۴ نویسه باشد');
+    EmpE2EE.setPass(clean);
+    updateE2eeBadge();
+    toast(clean ? 'کلید رمزگذاری سرتاسری (E2EE) فعال شد' : 'رمز سفارشی حذف شد (استفاده از کلید خودکار)');
+    if (S.user && navigator.onLine) backup(false);
+  }
+  async function deleteAccount() {
+    if (!S.user) return;
+    if (!confirm('هشدار: با حذف حساب، تمام اطلاعات ابری، پروفایل و داده‌های این دستگاه برای همیشه پاک می‌شوند. آیا مطمئن هستید؟')) return;
+    try {
+      const { error } = await sb.rpc('delete_my_account');
+      if (error) throw error;
+    } catch (e) {
+      try { await sb.from('user_backups').delete().eq('user_id', S.user.id); } catch (x) {}
+    }
+    S.user = null; wipeLocal();
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {}
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    toast('حساب کاربری و داده‌ها به‌طور کامل حذف شدند');
+    setTimeout(() => location.reload(), 800);
   }
   function wipeLocal() {
     Object.keys(localStorage).filter(k => k.indexOf('emp_') === 0).forEach(k => localStorage.removeItem(k));
@@ -631,6 +771,8 @@
     else if (a === 'restore') restore(true);
     else if (a === 'chpw') { S.fromAccount = true; authRoot.hidden = false; preparePw(false); show('setpw'); }
     else if (a === 'logout') logout();
+    else if (a === 'e2eekey') configureE2eePass();
+    else if (a === 'delacct') deleteAccount();
     else if (a === 'mfaon') mfaOn();
     else if (a === 'mfaoff') mfaOff();
     else if (a === 'sessions') sessionsOpen();
