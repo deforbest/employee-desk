@@ -1247,8 +1247,9 @@
             <div id="acctUserBox" hidden>
               <div class="set-group-title">پشتیبان ابری</div>
               <div class="set-group">
-                <div class="set-row"><div class="set-row-text"><div class="set-row-title">ذخیرهٔ داده‌ها در ابر</div><div class="set-row-sub">فقط خودتان به آن دسترسی دارید</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="backup">⬆️ ذخیره</button></div>
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">ذخیرهٔ داده‌ها در ابر</div><div class="set-row-sub">با رمز پشتیبانِ شما روی همین دستگاه رمزگذاری می‌شود و فقط متن رمزشده به سرور می‌رود</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="backup">⬆️ ذخیره</button></div>
                 <div class="set-row"><div class="set-row-text"><div class="set-row-title">بازیابی از ابر</div><div class="set-row-sub">داده‌های این دستگاه جایگزین می‌شود</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="restore">⬇️ بازیابی</button></div>
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">رمز پشتیبانِ تازه</div><div class="set-row-sub">اگر رمز را فراموش کرده‌اید؛ پشتیبان قبلی قابل بازیابی نیست و با داده‌های این دستگاه جایگزین می‌شود</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="bkreset">تعیین رمز تازه</button></div>
               </div>
               <div class="set-group-title">امنیت</div>
               <div class="set-group">
@@ -1259,6 +1260,7 @@
               <div class="set-group">
                 <div class="set-row" id="acctPwRow"><div class="set-row-text"><div class="set-row-title">رمز عبور</div><div class="set-row-sub">برای ورود بدون کد ایمیل</div></div><button type="button" class="btn btn-secondary btn-sm" data-act="chpw">تعیین / تغییر</button></div>
                 <div class="set-row"><div class="set-row-text"><div class="set-row-title">خروج از حساب</div><div class="set-row-sub">پس از پشتیبان‌گیری، داده‌های این دستگاه پاک می‌شود</div></div><button type="button" class="btn btn-danger btn-sm" data-act="logout">خروج</button></div>
+                <div class="set-row"><div class="set-row-text"><div class="set-row-title">حذف حساب</div><div class="set-row-sub">حساب و پشتیبان ابری برای همیشه پاک می‌شود</div></div><button type="button" class="btn btn-danger btn-sm" data-act="delacct">حذف حساب</button></div>
               </div>
             </div>
           </div>
@@ -1358,6 +1360,21 @@
               <div class="set-row">
                 <div class="set-row-text"><div class="set-row-title">مبلغ به حروف</div><div class="set-row-sub">زیر فیلدهای مبلغ: «۲ میلیون و ۵۰۰ هزار تومان»</div></div>
                 <label class="switch"><input type="checkbox" id="setShowWords" data-set="showWords" aria-label="نمایش مبلغ به حروف"><span></span></label>
+              </div>
+            </div>
+
+            <div class="set-group-title">ثبت تراکنش از پیامک بانکی</div>
+            <div class="set-group">
+              <div class="set-row">
+                <div class="set-row-text"><div class="set-row-title">ثبت از پیامک</div><div class="set-row-sub">با اشتراک‌گذاری یا چسباندن پیامک بانکی؛ فقط مبلغ، بانک، نوع و زمان ذخیره می‌شود</div></div>
+                <label class="switch"><input type="checkbox" id="setSmsEnabled" aria-label="فعال بودن ثبت از پیامک"><span></span></label>
+              </div>
+              <div class="set-row" id="setSmsModeRow">
+                <div class="set-row-text"><div class="set-row-title">حالت پیش‌فرض ثبت</div><div class="set-row-sub">وقتی چند تراکنش پیدا می‌شود</div></div>
+                <select id="setSmsMode" class="select" aria-label="حالت پیش‌فرض ثبت از پیامک">
+                  <option value="all">ثبت همه (پیش‌فرض)</option>
+                  <option value="select">انتخاب تراکنش‌ها</option>
+                </select>
               </div>
             </div>
 
@@ -2093,6 +2110,20 @@
             amount: amt,
             title: cleanTitle,
             dateKey: dateKey || TODAY_KEY
+          });
+          this.saveTransactions(list);
+          return true;
+        },
+        addTransactionEx(o) { // ثبت تراکنش با فیلدهای اضافه (بانک، ساعت، منبع). فقط مبلغ/بانک/نوع/زمان؛ هیچ متن پیامکی ذخیره نمی‌شود.
+          const amt = Math.round(Number(o && o.amount) || 0);
+          if (amt <= 0) return false;
+          const list = this.getTransactions();
+          if (o.fp && !o.force && list.some(t => t.fp === o.fp)) return 'dup';
+          list.unshift({
+            id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+            type: o.type === 'income' ? 'income' : 'expense', amount: amt,
+            title: String(o.title || 'تراکنش بانکی').trim().slice(0, 80), dateKey: o.dateKey || TODAY_KEY,
+            time: /^\d{2}:\d{2}$/.test(o.time || '') ? o.time : '', bank: String(o.bank || '').slice(0, 30), src: o.src === 'sms' ? 'sms' : '', fp: String(o.fp || '').slice(0, 80)
           });
           this.saveTransactions(list);
           return true;
@@ -3927,6 +3958,13 @@
       }
 
       /* FINANCE & OVERDUE LOANS UI CONTROLLER */
+      window.EmpFinance = {
+        add: o => FinanceModule.addTransactionEx(o),
+        has: fp => FinanceModule.getTransactions().some(t => t.fp === fp),
+        refresh: () => { try { renderCalendarGrid(); } catch (e) {} try { renderFinanceView(); } catch (e) {} },
+        sep: n => Fmt.sepFa(n), toFa: s => Fmt.toFa(s), toast: m => toast(m), todayKey: () => TODAY_KEY
+      };
+
       function renderFinanceCategories() {
         const cats = currentTxType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
         const box = document.getElementById('finCategoryChips');
@@ -4084,7 +4122,8 @@
                   <div class="task-title">${Fmt.esc(t.title)}</div>
                   <div class="task-meta">
                     <span class="badge ${isInc ? 'badge-success' : 'badge-danger'}">${isInc ? 'دریافتی (+)' : 'خرج (-)'}</span>
-                    <span>📅 ${Fmt.toFa(t.dateKey)}</span>
+                    <span>📅 ${Fmt.toFa(t.dateKey)}${t.time ? ' • ' + Fmt.toFa(t.time) : ''}</span>
+                    ${t.bank ? `<span>🏦 ${Fmt.esc(t.bank)}</span>` : ''}
                     <span>${Fmt.rialToTomanReadable(t.amount)}</span>
                   </div>
                 </div>
@@ -5035,11 +5074,13 @@
     })();
   </script>
 <script src="icons.js"></script>
+<script src="sms-parser.js"></script>
+<script src="sms-ui.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="auth.js"></script>
 <script>
   // ثبت سرویس‌ورکر (فقط روی آدرس https یا localhost؛ از فایل مستقیم کاری نمی‌کند)
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
   }
 </script>

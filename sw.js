@@ -1,13 +1,13 @@
 // File: sw.js | Version: 1.3.0 | Date: 2026-10-26
 // سرویس‌ورکر: ۱) کار آفلاین  ۲) نمایش اعلان‌ها  ۳) بررسی دوره‌ای یادآورها (در صورت پشتیبانی مرورگر)
 // قیمت‌های بازار هرگز ذخیره نمی‌شوند و همیشه مستقیم از اینترنت می‌آیند.
-const CACHE = 'emp-desk-v5.3.0';
+const CACHE = 'emp-desk-v5.4.0';
 const DIGEST_CACHE = 'emp-digest-v49';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 // فایل‌های ورود/ثبت‌نام؛ اگر یکی در دسترس نبود نصب سرویس‌ورکر خراب نشود
-const AUTH_ASSETS = ['./auth.js', './auth.css', './icons.js', './ui.css', './config.js', './vendor/supabase.js'];
+const AUTH_ASSETS = ['./auth.js', './auth.css', './icons.js', './ui.css', './sms-parser.js', './sms-ui.js', './config.js', './vendor/supabase.js'];
 // این‌ها همیشه اول از اینترنت گرفته می‌شوند (تا تغییر تنظیمات/کلیدها کهنه نماند) و فقط آفلاین از حافظه می‌آیند
-const FRESH_FIRST = /\/(auth\.js|auth\.css|icons\.js|ui\.css|config\.js)$/;
+const FRESH_FIRST = /\/(auth\.js|auth\.css|icons\.js|ui\.css|sms-parser\.js|sms-ui\.js|config\.js)$/;
 
 self.addEventListener('install', event => {
   event.waitUntil(

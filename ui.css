@@ -87,3 +87,37 @@ html:not(.has-auth) [data-setcat="account"], html:not(.has-auth) [data-setpanel=
   .toast-container { left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); align-items: center; }
   .toast { border-radius: 99px; padding: 10px 18px; background: var(--glass-strong); color: var(--text-primary); border: 1px solid var(--glass-line); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: var(--glass-shadow); }
 }
+
+/* ===== ثبت از پیامک بانکی ===== */
+.sms-backdrop { position: fixed; inset: 0; z-index: 3500; background: rgba(15,23,42,.42); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+.sms-backdrop[hidden] { display: none !important; }
+.sms-sheet { width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; background: var(--glass-strong, var(--bg-surface)); -webkit-backdrop-filter: blur(26px); backdrop-filter: blur(26px); border: 1px solid var(--glass-line, var(--border-color)); border-radius: 24px; padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--glass-shadow, var(--shadow-md)); color: var(--text-primary); }
+.sms-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 1.02rem; }
+.sms-hint { font-size: .8rem; color: var(--text-secondary); line-height: 1.95; margin: 0 0 10px; }
+.sms-sheet textarea.input { width: 100%; min-height: 96px; resize: vertical; font-size: 16px; }
+.sms-row { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
+.sms-row .select { flex: 1 1 140px; }
+.sms-msg { font-size: .82rem; font-weight: 700; color: var(--primary-text); background: var(--primary-soft); border-radius: 12px; padding: 9px 12px; margin-bottom: 10px; }
+.sms-teach { border: 1px dashed var(--border-color); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+.sms-teach-t { font-size: .82rem; font-weight: 700; margin-bottom: 8px; }
+.sms-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.sms-list-head { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 6px; font-size: .85rem; }
+.sms-list-head .au-link { padding: 4px 8px; }
+.sms-list { display: flex; flex-direction: column; gap: 8px; max-height: 38vh; overflow-y: auto; }
+.sms-item { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 12px; cursor: pointer; background: var(--bg-surface); }
+.sms-item.dup { opacity: .65; border-style: dashed; }
+.sms-item input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); flex-shrink: 0; }
+.sms-info { min-width: 0; }
+.sms-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sms-sub { font-size: .75rem; color: var(--text-muted); margin-top: 3px; }
+.sms-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.sms-actions .btn { flex: 1 1 140px; min-height: 46px; }
+.sms-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--primary-soft); color: var(--primary-text); border-radius: 16px; padding: 10px 14px; margin-bottom: 12px; font-weight: 700; font-size: .86rem; }
+@media (max-width: 820px) {
+  .sms-backdrop { align-items: flex-end; padding: 0; }
+  .sms-sheet { max-width: none; border-radius: 28px 28px 0 0; border-width: 1px 0 0; }
+}
+
+/* کارت پیشنهاد تراکنش تازه (نسخهٔ اندروید) */
+.sms-new { position: fixed; left: 12px; right: 12px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 3600; max-width: 520px; margin: 0 auto; background: var(--glass-strong, var(--bg-surface)); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border: 1px solid var(--glass-line, var(--border-color)); border-radius: 22px; padding: 14px 16px; box-shadow: var(--glass-shadow, var(--shadow-md)); color: var(--text-primary); }
+.sms-new-t { font-weight: 800; font-size: .9rem; margin-bottom: 8px; }

@@ -1,31 +1,36 @@
-// File: supabase/functions/tg-auth/index.ts | Version: 1.0.0 | Date: 2026-10-25
-// برنامه از این تابع دو کار می‌خواهد: start (ساخت درخواست و لینک ربات) و poll (بررسی تأیید و دریافت توکن ورود).
-// verifier فقط در مرورگر کاربر می‌ماند؛ حتی اگر لینک ربات لو برود، کسی نمی‌تواند نشست را بگیرد.
+// File: supabase/functions/tg-auth/index.ts | Version: 1.1.0 | Date: 2026-11-01
+// start: create a login request + bot link. poll: check confirmation and return a one-time sign-in token.
+// The verifier never leaves the user's browser; a leaked bot link alone cannot steal a session.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 const BOT = Deno.env.get('TELEGRAM_BOT_USERNAME') ?? '';
-const ALLOWED = Deno.env.get('ALLOWED_ORIGIN') ?? '*';
+// ALLOWED_ORIGIN may hold several origins separated by commas (website + Android app origin https://localhost)
+const ALLOWED = (Deno.env.get('ALLOWED_ORIGIN') ?? '*').split(',').map((s) => s.trim()).filter(Boolean);
 const MAIL_DOMAIN = Deno.env.get('PLACEHOLDER_EMAIL_DOMAIN') ?? 'gmail.com';
+const anyOrigin = ALLOWED.includes('*');
 
-const cors = {
-  'Access-Control-Allow-Origin': ALLOWED,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Vary': 'Origin',
-};
-const json = (b: unknown, status = 200) =>
-  new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const sha256hex = async (s: string) =>
   Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))))
     .map((b) => b.toString(16).padStart(2, '0')).join('');
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('origin') ?? '';
+  const originOk = anyOrigin || ALLOWED.includes(origin);
+  const cors = {
+    'Access-Control-Allow-Origin': anyOrigin ? '*' : (originOk ? origin : ALLOWED[0] ?? ''),
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+  const json = (b: unknown, status = 200) =>
+    new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ status: 'error', code: 'method' }, 405);
-  if (ALLOWED !== '*' && req.headers.get('origin') !== ALLOWED) return json({ status: 'error', code: 'origin' }, 403);
+  if (!anyOrigin && !originOk) return json({ status: 'error', code: 'origin' }, 403);
   if (!BOT) return json({ status: 'error', code: 'not_configured' });
 
   let b: Record<string, unknown>;
@@ -36,7 +41,6 @@ Deno.serve(async (req) => {
       const purpose = b.purpose === 'phone' ? 'phone' : 'login';
       const challenge = String(b.challenge ?? '');
       if (!/^[0-9a-f]{64}$/.test(challenge)) return json({ status: 'error', code: 'bad_challenge' });
-      // محدودیت ساده برای جلوگیری از سوءاستفاده
       const { count } = await db.from('tg_login_requests').select('id', { count: 'exact', head: true })
         .gte('created_at', new Date(Date.now() - 60_000).toISOString());
       if ((count ?? 0) > 60) return json({ status: 'error', code: 'busy' });
@@ -55,16 +59,14 @@ Deno.serve(async (req) => {
       if (r.consumed || new Date(r.expires_at) < new Date()) return json({ status: 'expired' });
       if (r.status !== 'verified') return json({ status: 'pending', step: r.status });
 
-      // استفادهٔ یک‌بار‌مصرف و اتمی
       const { data: c } = await db.from('tg_login_requests').update({ consumed: true }).eq('id', id).eq('consumed', false).select('id');
       if (!c || c.length === 0) return json({ status: 'expired' });
 
-      // حساب را بر پایهٔ شناسهٔ عددی تلگرام (پایدار و تأییدشده) می‌سازیم. این ایمیل جایگزین هرگز برای ارسال استفاده نمی‌شود.
       const email = `tg-${r.tg_id}@${MAIL_DOMAIN}`;
       await db.auth.admin.createUser({
         email, email_confirm: true,
         user_metadata: { provider: 'telegram', telegram_id: r.tg_id, full_name: r.tg_name, telegram_username: r.tg_username },
-      }); // اگر قبلاً وجود داشته باشد خطای «ثبت‌شده» برمی‌گردد که عمداً نادیده گرفته می‌شود
+      });
       const link = await db.auth.admin.generateLink({ type: 'magiclink', email });
       const hashed = link.data?.properties?.hashed_token;
       if (link.error || !hashed || !link.data?.user) return json({ status: 'error', code: 'link' });
