@@ -1,4 +1,4 @@
-/* File: auth.js | Version: 1.4.0 | Date: 2026-10-30
+/* File: auth.js | Version: 1.6.0 | Date: 2026-11-01
    ورود و ثبت‌نام: ایمیل + کد تأیید (+ رمز اختیاری)، گوگل، گیت‌هاب، تلگرام، شماره تلفن (از راه ربات تلگرام).
    سرور: Supabase (طرح رایگان). در این فایل هیچ کلید محرمانه‌ای نیست؛ فقط آدرس پروژه و کلید عمومی (anon) از config.js خوانده می‌شود.
    اتصال هوشمند: اگر آدرس پروکسی (SUPABASE_PROXY_URL) تعریف شده باشد، برنامه خودش سریع‌ترین مسیر در دسترس را انتخاب می‌کند. */
@@ -15,7 +15,7 @@
   const STORE_KEY = 'emp-auth', FLOW_KEY = 'emp_auth_flow', OTP_TTL = 10 * 60 * 1000;
   const DIRECT = String(CFG.SUPABASE_URL || '').replace(/\/+$/, ''); // در حالت مخفی‌سازی آدرس، خالی است
     const DATA_KEYS = ['emp_desk_settings_v44', 'emp_onboarding_done_v44', 'emp_shifts_cfg_v43', 'emp_custom_shifts_v42',
-    'emp_shift_overrides_v42', 'emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46'];
+    'emp_shift_overrides_v42', 'emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46', 'emp_sms_cfg', 'emp_sms_rules'];
   const CONTENT_KEYS = ['emp_desk_notes_v4', 'emp_finance_tx_v44', 'emp_finance_loans_v46', 'emp_shifts_cfg_v43'];
   const S = { user: null, entered: false, cur: '', email: '', mode: 'otp', forgot: false, fromAccount: false, cool: 0, timer: null, tgRun: 0 };
   let sb = null;
@@ -168,6 +168,24 @@
       <button type="submit" class="btn btn-primary au-block">ذخیرهٔ رمز و ورود</button>
     </form>
     <button type="button" class="au-link" data-act="skippw" id="auSkipPw">حالا نه، ادامه می‌دهم</button>
+  </section>
+
+  <section data-screen="bkpass" hidden>
+    <h1 class="au-h" id="auBkTitle" tabindex="-1">رمز پشتیبان</h1>
+    <p class="au-p" id="auBkHint"></p>
+    <form id="auBkForm" novalidate>
+      <label class="au-l" for="auBkPass">رمز پشتیبان</label>
+      <div class="au-pw"><input class="input au-ltr" id="auBkPass" type="password" autocomplete="off" maxlength="128">
+        <button type="button" class="btn btn-secondary btn-sm" data-act="togglepw" data-target="auBkPass" aria-label="نمایش رمز">نمایش</button></div>
+      <div id="auBkBox2" hidden>
+        <label class="au-l" for="auBkPass2">تکرار رمز پشتیبان</label>
+        <input class="input au-ltr" id="auBkPass2" type="password" autocomplete="off" maxlength="128">
+        <div class="au-meter" aria-hidden="true"><i id="auBkMeter"></i></div>
+        <div class="au-sub">حداقل ۸ نویسه؛ جمله‌ای که به یاد بسپارید بهتر از یک کلمه است.</div>
+      </div>
+      <button type="submit" class="btn btn-primary au-block" id="auBkGo">ادامه</button>
+    </form>
+    <div class="au-row"><button type="button" class="au-link" id="auBkForgot" data-act="bkforgot" hidden>رمز را فراموش کرده‌ام</button><button type="button" class="au-link" data-act="bkcancel">انصراف</button></div>
   </section>
 
   <section data-screen="mfa" hidden>
@@ -331,6 +349,19 @@
     if (v.length >= OTP_LEN) verifyCode();
   });
 
+
+  /* بررسی رمزهای افشاشده با روش k-Anonymity: فقط ۵ نویسهٔ اول چکیدهٔ SHA-1 فرستاده می‌شود و خودِ رمز هرگز نمی‌رود.
+     اگر سرویس در دسترس نبود (مثلاً اینترنت بین‌الملل قطع بود) کاربر مسدود نمی‌شود. */
+  async function isPwnedPassword(password) {
+    try {
+      const h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(password)))).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 4000);
+      const res = await fetch('https://api.pwnedpasswords.com/range/' + h.slice(0, 5), { signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+      clearTimeout(tm); if (!res.ok) return false;
+      const suffix = h.slice(5); return (await res.text()).split('\n').some(l => l.split(':')[0].trim() === suffix);
+    } catch (e) { return false; }
+  }
+
   /* ---------- تعیین رمز (اختیاری) ---------- */
   function preparePw(forgot) {
     $('auNewPwd').value = ''; meter('');
@@ -347,8 +378,9 @@
   $('auPwForm').addEventListener('submit', e => {
     e.preventDefault();
     const p = $('auNewPwd').value;
-    if (p.length < 8 || !/[A-Za-z]/.test(p) || !/\d/.test(p)) return msg('رمز باید حداقل ۸ نویسه و شامل حرف و عدد باشد.');
+    if (p.length < 10 || !/[A-Za-z]/.test(p) || !/\d/.test(p)) return msg('رمز باید حداقل ۱۰ نویسه و شامل حرف و عدد باشد.');
     run(async () => {
+      if (await isPwnedPassword(p)) return msg('این رمز قبلاً در نشت‌های اطلاعاتی جهانی دیده شده است. لطفاً رمز دیگری انتخاب کنید.');
       const { data, error } = await sb.auth.updateUser({ password: p, data: { has_password: true, pwd_asked: true } });
       if (error) return msg(errText(error));
       $('auNewPwd').value = '';
@@ -521,6 +553,7 @@
   }
   function closeAuth() { authRoot.hidden = true; S.fromAccount = false; }
   function dismiss() {
+    if (S.cur === 'bkpass') return finishPass(null);
     if (S.cur === 'mfa' && S.mfaGate) { // انصراف از مرحلهٔ دوم = خروج از نشست نیمه‌کاره
       S.pend = null; S.mfaGate = false; S.tgRun++; S.user = null;
       try { sb.auth.signOut({ scope: 'local' }).catch(() => {}); } catch (e) {}
@@ -560,7 +593,7 @@
     if (GUEST_OK && localStorage.getItem('emp_guest') === '1') return enter(null, false);
     openAuth(); if (oerr) msg('ورود ناموفق بود؛ دوباره تلاش کنید.');
   }
-  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && S.user) { S.user = null; location.reload(); } });
+  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') S.bkPass = ''; if (ev === 'SIGNED_OUT' && S.user) { S.user = null; location.reload(); } });
 
   /* ---------- پشتیبان ابری ---------- */
   function collect() { const d = {}; DATA_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) { try { d[k] = JSON.parse(v); } catch (e) {} } }); return d; }
@@ -568,28 +601,180 @@
     if (!d || typeof d !== 'object') return false;
     let n = 0; DATA_KEYS.forEach(k => { if (k in d) { localStorage.setItem(k, JSON.stringify(d[k])); n++; } }); return n > 0;
   }
-  async function backup(quiet) {
+  /* رمزگذاری سرتاسری: داده‌ها پیش از ارسال، روی همین دستگاه با رمز پشتیبان (جدا از رمز ورود) رمز می‌شوند.
+     رمز: PBKDF2-SHA256 با ۶۰۰ هزار تکرار ← AES-256-GCM؛ شناسهٔ کاربر هم به رمزنگاری بسته می‌شود. سرور فقط متن رمزشده را می‌بیند. */
+  const TE = new TextEncoder(), TD = new TextDecoder();
+  const b64 = u8 => { let s2 = ''; for (let i = 0; i < u8.length; i += 8192) s2 += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return btoa(s2); };
+  const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  async function deriveKey(pass, salt, iter) {
+    const km = await crypto.subtle.importKey('raw', TE.encode(pass), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  /* ---- نسخهٔ ۳ پشتیبان: کلید اصلی داده (DEK) با دو قفل مستقل بسته می‌شود: رمز پشتیبان و کد بازیابی ۱۶ نویسه‌ای.
+     (طرح «رمزنگاری پوششی» مستند تیم فنی؛ با ۶۰۰ هزار تکرار برای رمز و بستن شناسهٔ کاربر به همهٔ رمزنگاری‌ها) ---- */
+  const REC_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function genRecoveryCode() {
+    const rb = crypto.getRandomValues(new Uint8Array(16)), c = Array.from(rb).map(b => REC_ALPHABET[b % REC_ALPHABET.length]);
+    return [0, 4, 8, 12].map(i => c.slice(i, i + 4).join('')).join('-');
+  }
+  function asRecovery(t) { // اگر متن شبیه کد بازیابی بود، به قالب استاندارد درمی‌آید؛ وگرنه ''
+    const n = String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (n.length !== 16 || /[^A-HJ-NP-Z2-9]/.test(n)) return '';
+    return [0, 4, 8, 12].map(i => n.slice(i, i + 4)).join('-');
+  }
+  async function wrapLock(secret, dek, uid, iter) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const kek = await deriveKey(secret, salt, iter);
+    const w = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: TE.encode(uid + '|dek') }, kek, dek);
+    return { iter, salt: b64(salt), iv: b64(iv), wrapped: b64(new Uint8Array(w)) };
+  }
+  async function unwrapLock(secret, lock, uid) {
+    if (!lock || !(lock.iter >= 100000 && lock.iter <= 1500000)) throw new Error('bad_lock');
+    const kek = await deriveKey(secret, unb64(lock.salt), lock.iter);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(lock.iv), additionalData: TE.encode(uid + '|dek') }, kek, unb64(lock.wrapped)));
+  }
+  async function unwrapAny(pkg, secret, uid) { // اول رمز پشتیبان، بعد (اگر شبیه کد بود) کد بازیابی
+    try { return await unwrapLock(secret, pkg.locks && pkg.locks.password, uid); } catch (e) {}
+    const rc = asRecovery(secret); if (!rc) throw new Error('bad_secret');
+    return await unwrapLock(rc, pkg.locks && pkg.locks.recovery, uid);
+  }
+  async function encryptBackupV2(obj, pass, uid) { // قالب قدیمی؛ فقط وقتی استفاده می‌شود که نشود کد بازیابی نشان داد (مثلاً هنگام خروج خودکار)
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 600000;
+    const key = await deriveKey(pass, salt, iter);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: TE.encode(uid) }, key, TE.encode(JSON.stringify(obj)));
+    return { v: 2, alg: 'AES-GCM', kdf: 'PBKDF2-SHA256', iter, salt: b64(salt), iv: b64(iv), ct: b64(new Uint8Array(ct)) };
+  }
+  // prev: پشتیبان فعلی ابر (برای نگه داشتن همان کلید و کد بازیابی). allowNewLock: آیا اجازه داریم کد بازیابی تازه بسازیم و نشان دهیم.
+  async function encryptBackup(obj, pass, uid, prev, allowNewLock) {
+    let dek = null, locks = null, recoveryCode = null;
+    if (prev && prev.v === 3 && prev.locks) { try { dek = await unwrapAny(prev, pass, uid); locks = prev.locks; } catch (e) { dek = null; } }
+    if (!dek) {
+      if (!allowNewLock) return { pkg: await encryptBackupV2(obj, pass, uid), recoveryCode: null };
+      dek = crypto.getRandomValues(new Uint8Array(32)); recoveryCode = genRecoveryCode();
+      locks = { password: await wrapLock(pass, dek, uid, 600000), recovery: await wrapLock(recoveryCode, dek, uid, 100000) };
+    }
+    const key = await crypto.subtle.importKey('raw', dek, 'AES-GCM', false, ['encrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: TE.encode(uid) }, key, TE.encode(JSON.stringify(obj)));
+    return { pkg: { v: 3, alg: 'AES-GCM', iv: b64(iv), ct: b64(new Uint8Array(ct)), locks }, recoveryCode };
+  }
+  async function decryptBackup(pkg, pass, uid) {
+    if (pkg && pkg.v === 3) {
+      const dek = await unwrapAny(pkg, pass, uid);
+      const key = await crypto.subtle.importKey('raw', dek, 'AES-GCM', false, ['decrypt']);
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(pkg.iv), additionalData: TE.encode(uid) }, key, unb64(pkg.ct));
+      return JSON.parse(TD.decode(pt));
+    }
+    if (!pkg || pkg.v !== 2 || !(pkg.iter >= 100000 && pkg.iter <= 1500000)) throw new Error('bad_backup');
+    const key = await deriveKey(pass, unb64(pkg.salt), pkg.iter);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(pkg.iv), additionalData: TE.encode(uid) }, key, unb64(pkg.ct));
+    return JSON.parse(TD.decode(pt));
+  }
+  // نمایش یک‌بارهٔ کد بازیابی؛ تا کاربر تأیید نکند بسته نمی‌شود
+  function showRecoveryCode(code) {
+    return new Promise(resolve => {
+      const w = D.createElement('div'); w.className = 'sms-backdrop'; w.style.zIndex = '3900'; w.setAttribute('role', 'alertdialog'); w.setAttribute('aria-modal', 'true');
+      const sh = D.createElement('div'); sh.className = 'sms-sheet';
+      const mk = (tag, cls, txt) => { const e = D.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; };
+      sh.appendChild(mk('strong', null, 'کد بازیابی پشتیبان شما'));
+      sh.appendChild(mk('p', 'sms-hint', 'اگر رمز پشتیبان را فراموش کنید، فقط با این کد می‌توانید داده‌هایتان را برگردانید. آن را همین حالا یادداشت کنید یا کپی و در جای امنی نگه دارید. این کد دوباره نشان داده نمی‌شود و ما هم نمی‌توانیم آن را ببینیم.'));
+      const box = mk('div'); box.style.cssText = 'text-align:center;margin:12px 0;'; const b = D.createElement('bdi'); b.dir = 'ltr';
+      b.style.cssText = 'display:inline-block;font:700 20px/1.6 monospace;letter-spacing:2px;padding:10px 14px;border-radius:14px;border:1px dashed currentColor;user-select:all;'; b.textContent = code; box.appendChild(b); sh.appendChild(box);
+      const act = mk('div', 'sms-actions');
+      const cp = mk('button', 'btn btn-secondary', 'کپی کد'); cp.type = 'button';
+      const ok = mk('button', 'btn btn-primary', 'نوشتم و نگه داشتم'); ok.type = 'button';
+      cp.addEventListener('click', () => { try { navigator.clipboard.writeText(code).then(() => { cp.textContent = 'کپی شد'; }, () => {}); } catch (e) {} });
+      ok.addEventListener('click', () => { w.remove(); resolve(true); });
+      act.appendChild(cp); act.appendChild(ok); sh.appendChild(act); w.appendChild(sh); D.body.appendChild(w);
+    });
+  }
+  async function getRemote() {
+    const { data, error } = await sb.from('user_backups').select('data').eq('user_id', S.user.id).maybeSingle();
+    if (error) throw error; return data && data.data ? data.data : null;
+  }
+  // پنجرهٔ دریافت رمز پشتیبان. verify: تابعی که درستی رمز را با پشتیبان فعلی می‌سنجد.
+  function askPass(mode, verify, why) {
+    return new Promise(resolve => {
+      S.bk = { resolve, mode, verify };
+      $('auBkPass').value = ''; $('auBkPass2').value = ''; $('auBkMeter').style.width = '0';
+      const create = mode === 'create';
+      $('auBkBox2').hidden = !create; $('auBkForgot').hidden = create || !verify;
+      $('auBkTitle').textContent = create ? 'یک رمز پشتیبان بسازید' : 'رمز پشتیبان را بنویسید';
+      $('auBkHint').textContent = (why ? why + ' ' : '') + (create
+        ? 'داده‌هایتان پیش از رفتن به ابر با این رمز قفل می‌شود؛ حتی ما و سرور هم نمی‌توانیم آن را بخوانیم. این رمز با رمز ورود فرق دارد. پس از ذخیره، یک کد بازیابی برای روز فراموشی رمز نشان داده می‌شود.'
+        : 'این همان رمزی است که هنگام اولین پشتیبان‌گیری ساخته‌اید. اگر فراموشش کرده‌اید، کد بازیابی ۱۶ نویسه‌ای را بنویسید.');
+      authRoot.hidden = false; S.fromAccount = true; show('bkpass');
+    });
+  }
+  function finishPass(v) { const r = S.bk && S.bk.resolve; S.bk = null; closeAuth(); if (r) r(v); }
+  $('auBkPass2').addEventListener('input', e => meter2(e.target.value));
+  $('auBkPass').addEventListener('input', e => { if (S.bk && S.bk.mode === 'create') meter2(e.target.value); });
+  function meter2(p) { const sc = pwScore(p || ''); const i = $('auBkMeter'); i.style.width = (sc * 25) + '%'; i.style.background = sc <= 1 ? 'var(--danger)' : sc === 2 ? 'var(--warning)' : 'var(--success)'; }
+  $('auBkForm').addEventListener('submit', e => {
+    e.preventDefault(); if (!S.bk) return;
+    const p = $('auBkPass').value, create = S.bk.mode === 'create';
+    if (create) {
+      if (p.length < 8) return msg('رمز پشتیبان باید حداقل ۸ نویسه باشد.');
+      if (p !== $('auBkPass2').value) return msg('دو رمز یکی نیست.');
+      return finishPass(p);
+    }
+    if (!p) return msg('رمز پشتیبان را بنویسید.');
+    if (!S.bk.verify) return finishPass(p);
+    run(async () => { if (await S.bk.verify(p)) finishPass(p); else { $('auBkPass').value = ''; msg('رمز پشتیبان درست نیست.'); } }, 'در حال بررسی…');
+  });
+
+  async function backup(quiet, forceNew) {
     if (!S.user) return false;
     try {
-      const { error } = await sb.from('user_backups').upsert({ user_id: S.user.id, data: collect(), updated_at: new Date().toISOString() });
-      if (error) throw error; if (!quiet) toast('داده‌ها در ابر ذخیره شد'); return true;
+      const remote = await getRemote(); const encRemote = !!(remote && (remote.v === 2 || remote.v === 3));
+      let pass = forceNew ? '' : S.bkPass;
+      if (!pass) {
+        pass = forceNew || !encRemote
+          ? await askPass('create', null, forceNew ? 'پشتیبان ابری قبلی با رمز تازه جایگزین می‌شود.' : '')
+          : await askPass('enter', p => decryptBackup(remote, p, S.user.id).then(() => true, () => false));
+        if (!pass) { if (!quiet) toast('ذخیره لغو شد'); return false; }
+        S.bkPass = pass;
+      }
+      const enc = await encryptBackup(collect(), pass, S.user.id, forceNew ? null : remote, !quiet);
+      const { error } = await sb.from('user_backups').upsert({ user_id: S.user.id, data: enc.pkg, updated_at: new Date().toISOString() });
+      if (error) throw error; if (!quiet) toast('داده‌ها رمزگذاری و در ابر ذخیره شد');
+      if (enc.recoveryCode) await showRecoveryCode(enc.recoveryCode);
+      return true;
     } catch (e) { if (!quiet) toast('ذخیره در ابر انجام نشد'); return false; }
+  }
+  async function openRemote(why) { // پشتیبان را (در صورت رمزگذاری، با پرسیدن رمز) باز می‌کند
+    const remote = await getRemote(); if (!remote) return { none: true };
+    if (remote.v !== 2 && remote.v !== 3) return { data: remote };
+    let pass = S.bkPass;
+    for (let tries = 0; tries < 1; tries++) {
+      if (!pass) { pass = await askPass('enter', p => decryptBackup(remote, p, S.user.id).then(() => true, () => false), why); if (!pass) return { cancelled: true }; }
+    }
+    const data = await decryptBackup(remote, pass, S.user.id); S.bkPass = pass; return { data };
   }
   async function restore(confirmFirst) {
     try {
-      const { data, error } = await sb.from('user_backups').select('data').eq('user_id', S.user.id).maybeSingle();
-      if (error) throw error;
-      if (!data || !data.data) return toast('پشتیبانی در ابر پیدا نشد');
+      const r = await openRemote('پشتیبان ابری شما رمزگذاری شده است.');
+      if (r.none) return toast('پشتیبانی در ابر پیدا نشد'); if (r.cancelled) return;
       if (confirmFirst && !confirm('داده‌های این دستگاه با پشتیبان ابری جایگزین شود؟')) return;
-      if (applyData(data.data)) { toast('بازیابی شد؛ برنامه دوباره بارگذاری می‌شود'); setTimeout(() => location.reload(), 900); }
+      if (applyData(r.data)) { toast('بازیابی شد؛ برنامه دوباره بارگذاری می‌شود'); setTimeout(() => location.reload(), 900); }
     } catch (e) { toast('بازیابی انجام نشد'); }
   }
   async function maybeRestore() {
     if (CONTENT_KEYS.some(k => localStorage.getItem(k) !== null)) return;
     try {
-      const { data } = await sb.from('user_backups').select('data').eq('user_id', S.user.id).maybeSingle();
-      if (data && data.data && applyData(data.data)) { toast('داده‌های شما از ابر بازیابی شد'); setTimeout(() => location.reload(), 900); }
+      const r = await openRemote('داده‌های ابری شما پیدا شد و رمزگذاری شده است. برای بازیابی، رمز را بنویسید (می‌توانید انصراف بدهید).');
+      if (r.data && applyData(r.data)) { toast('داده‌های شما از ابر بازیابی شد'); setTimeout(() => location.reload(), 900); }
     } catch (e) {}
+  }
+  async function deleteAccount() {
+    if (!confirm('حساب و پشتیبان ابری شما برای همیشه پاک می‌شود و قابل برگشت نیست. ادامه می‌دهید؟')) return;
+    const t = prompt('برای تأیید نهایی، کلمهٔ «حذف» را بنویسید:'); if (String(t || '').trim() !== 'حذف') return toast('حذف حساب لغو شد');
+    try {
+      const { data, error } = await sb.rpc('delete_my_account'); // تابع امن سمت دیتابیس؛ اگر دو مرحله‌ای فعال باشد، مرحلهٔ دوم لازم است
+      if (error || data !== true) return toast('حذف حساب انجام نشد. اگر دو مرحله‌ای فعال است، ابتدا دوباره وارد شوید.');
+    } catch (e) { return toast('حذف حساب انجام نشد'); }
+    S.user = null; wipeLocal(); try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {} try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    location.reload();
   }
   function wipeLocal() {
     Object.keys(localStorage).filter(k => k.indexOf('emp_') === 0).forEach(k => localStorage.removeItem(k));
@@ -631,6 +816,10 @@
     else if (a === 'restore') restore(true);
     else if (a === 'chpw') { S.fromAccount = true; authRoot.hidden = false; preparePw(false); show('setpw'); }
     else if (a === 'logout') logout();
+    else if (a === 'bkcancel') finishPass(null);
+    else if (a === 'bkforgot') { if (S.bk && confirm('با ساخت رمز تازه، پشتیبان ابری قبلی قابل بازیابی نیست و با داده‌های همین دستگاه جایگزین می‌شود. ادامه می‌دهید؟')) { const r = S.bk.resolve; S.bk = null; r(null); backup(false, true); } }
+    else if (a === 'bkreset') backup(false, true);
+    else if (a === 'delacct') deleteAccount();
     else if (a === 'mfaon') mfaOn();
     else if (a === 'mfaoff') mfaOff();
     else if (a === 'sessions') sessionsOpen();

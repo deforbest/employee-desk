@@ -1,4 +1,4 @@
-/* File: sms-parser.js | Version: 1.0.0 | Date: 2026-10-31
+/* File: sms-parser.js | Version: 1.1.0 | Date: 2026-11-01
    تحلیل پیامک بانکی ایرانی روی خود دستگاه. متن پیامک هرگز ذخیره یا ارسال نمی‌شود؛
    فقط مبلغ (ریال)، بانک، نوع (واریز/برداشت) و تاریخ و ساعت نگه داشته می‌شود. */
 (function (root) {
@@ -6,7 +6,9 @@
   const toEn = s => String(s || '')
     .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776)).replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
     .replace(/[٬،]/g, ',').replace(/٫/g, '.').replace(/[\u200c\u200f\u200e\u202a-\u202e\u00a0]/g, ' ')
-    .replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+    .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[أإ]/g, 'ا').replace(/ة/g, 'ه')
+    // جداکنندهٔ هزارگان «/» در بعضی بانک‌ها (مثل 1/200/000)؛ تاریخ‌ها (گروه‌های ۱ تا ۲ رقمی) دست‌نخورده می‌مانند
+    .replace(/(?<![\d\/])(\d{1,3}(?:\/\d{3})+)(?![\d\/])/g, m => m.replace(/\//g, ','));
 
   // نام بانک‌ها و نام‌های رایج پیامک‌فرستنده (حروف لاتین یا فارسی)
   const BANKS = [
@@ -24,9 +26,11 @@
     ['ثامن', ['ثامن', 'samen']], ['کوثر', ['کوثر', 'kosar']], ['شهر (آینده)', []]
   ].filter(b => b[1].length);
 
+  // فیلتر قاطع پیامک‌های رمز و کد (برگرفته از مستند تیم فنی): اگر این عبارت‌ها باشد، هرگز تراکنش نیست
+  const OTP_BLACKLIST_V2 = /(رمز\s*پویا|رمز\s*دوم|رمز\s*یکبار\s*مصرف|رمز\s*یک\s*بار\s*مصرف|کد\s*تایید|کد\s*ورود|کد\s*امنیتی|محرمانه|کد\s*فعال\s*سازی|پویا|otp|verification|security\s*code|passcode|pin\s*code)/i;
   const OTP_WORDS = /(رمز\s*(پویا|یکبار|دوم|اول)|کد\s*(تایید|تأیید|فعال|ورود|امنیتی)|cvv2?|otp|پسورد|یکبار\s*مصرف)/i;
-  const OUT_WORDS = ['برداشت', 'خرید', 'پرداخت', 'کسر', 'انتقال از', 'پایا از', 'حواله', 'کارمزد', 'بدهکار', 'قسط', 'پرداختی', 'خروج', 'انتقال وجه', 'کارت به کارت از', 'کارت‌به‌کارت از', 'ساتنا از'];
-  const IN_WORDS = ['واریز', 'دریافت', 'بستانکار', 'سود', 'حقوق', 'انتقال به', 'پایا به', 'برگشت', 'ورود', 'ساتنا به', 'عودت', 'یارانه'];
+  const OUT_WORDS = ['برداشت', 'کاهش', 'خرید', 'پرداخت', 'کسر', 'انتقال از', 'پایا از', 'حواله', 'کارمزد', 'بدهکار', 'قسط', 'پرداختی', 'خروج', 'انتقال وجه', 'کارت به کارت از', 'کارت‌به‌کارت از', 'ساتنا از'];
+  const IN_WORDS = ['واریز', 'افزایش', 'شارژ شد', 'دریافت', 'بستانکار', 'سود', 'حقوق', 'انتقال به', 'پایا به', 'برگشت', 'ورود', 'ساتنا به', 'عودت', 'یارانه'];
   const AMOUNT_RE = /([+\-−–]?)\s*(\d{1,3}(?:,\d{3})+|\d{4,})(?!\d)(?:\s*(ریال|تومان|ر\b|تومن))?([+\-−–]?)/g;
 
   function g2j(gy, gm, gd) {
@@ -86,6 +90,7 @@
     opts = opts || {};
     const t = toEn(raw).trim();
     if (t.length < 12) return null;
+    if (OTP_BLACKLIST_V2.test(t)) return null;
     if (OTP_WORDS.test(t) && !/(برداشت|واریز|مانده|موجودی)/.test(t)) return null; // پیامک رمز و تبلیغ نادیده گرفته می‌شود
     const bank = findBank(t, opts.sender);
     const dt = findDateTime(t);
@@ -105,6 +110,9 @@
       if (unit === 'تومان') v *= 10;
       cands.push({ v, sign, isBalance, idx: m.index, before, unit });
     }
+    // مانده فقط برای جدا کردن دو تراکنش هم‌مبلغ هم‌دقیقه استفاده می‌شود؛ از آن فقط یک چکیدهٔ ۱۶ بیتی نگه می‌داریم (قابل بازگشت به مانده نیست)
+    const balC = cands.find(c => c.isBalance); let bh = '';
+    if (balC) { let h = 2166136261; const bs = String(Math.round(balC.v)); for (let i = 0; i < bs.length; i++) { h ^= bs.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } bh = (h & 0xffff).toString(16).padStart(4, '0'); }
     const learned = applyLearned(t, opts.rules);
     let amount = 0, type = '', how = '';
     if (learned) { amount = learned.amount; type = learned.type; how = 'learned'; }
@@ -130,7 +138,7 @@
     const j = dt.date || g2j(now.getFullYear(), now.getMonth() + 1, now.getDate());
     const time = dt.time || ((dt.date && !opts.at) ? '' : pad(now.getHours()) + ':' + pad(now.getMinutes()));
     const dateKey = j.jy + '/' + pad(j.jm) + '/' + pad(j.jd);
-    return { type, amount: Math.round(amount), bank: learned && learned.bank ? learned.bank : bank, dateKey, time, dateFromSms: !!dt.date || !!opts.at, how };
+    return { type, amount: Math.round(amount), bank: learned && learned.bank ? learned.bank : bank, dateKey, time, dateFromSms: !!dt.date || !!opts.at, how, bh };
   }
 
   // چند پیامک چسبانده‌شده را جدا می‌کند (خط خالی، خط جداکننده، یا شروع دوبارهٔ نام بانک)
@@ -156,7 +164,8 @@
     return res;
   }
   // امضای تراکنش برای تشخیص تکراری بودن (بدون ذخیرهٔ متن)
-  const fingerprint = r => [r.type, r.amount, r.dateKey, r.time || '', r.bank || ''].join('|');
+  const fingerprintLegacy = r => [r.type, r.amount, r.dateKey, r.time || '', r.bank || ''].join('|');
+  const fingerprint = r => fingerprintLegacy(r) + (r.bh ? '|' + r.bh : '');
 
   // آموزش: عددهای متن را برای انتخاب کاربر برمی‌گرداند
   function numberTokens(raw) {
@@ -166,6 +175,6 @@
   }
   function labelBefore(before) { const w = String(before || '').trim().split(/\s+/).slice(-2).join(' '); return w.length >= 2 ? w : ''; }
 
-  const api = { parseOne, parseMany, splitMessages, fingerprint, numberTokens, labelBefore, BANK_NAMES: BANKS.map(b => b[0]), g2j };
+  const api = { parseOne, parseMany, splitMessages, fingerprint, fingerprintLegacy, numberTokens, labelBefore, BANK_NAMES: BANKS.map(b => b[0]), g2j };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SmsParser = api;
 })(typeof window !== 'undefined' ? window : globalThis);

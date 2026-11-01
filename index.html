@@ -1,4 +1,4 @@
-<!-- File: index.html | Version: 5.1.0 | Date: 2026-11-01 -->
+<!-- File: index.html | Version: 5.2.0 | Date: 2026-11-01 -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" data-theme="light" data-accent="teal">
 <head>
@@ -3190,11 +3190,13 @@
         const now = Date.now();
         const fired = Object.assign({}, SafeStorage.get(NOTIF_FIRED_KEY, {}), await this.readShown());
         let dirty = false, sent = 0;
+        const NAT = (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.SmsReader) || null;
+        if (NAT && NAT.drainFired) { try { const r = await NAT.drainFired(); (r.keys || []).forEach(k => { fired[k] = now; dirty = true; }); } catch (e) {} }
         Object.keys(fired).forEach(k => { if (now - fired[k] > 3 * 86400000) { delete fired[k]; dirty = true; } });
         for (const it of this.schedule()) {
           if (fired[it.key] || now < it.at || now - it.at > 12 * 3600000) continue;
           const r = await this.show(it.title, it.body, { tag: it.key, view: it.view });
-          if (r.ok) { fired[it.key] = now; dirty = true; sent++; }
+          if (r.ok) { fired[it.key] = now; dirty = true; sent++; if (NAT && NAT.cancelReminder) { try { NAT.cancelReminder({ key: it.key }); } catch (e) {} } }
         }
         if (dirty) SafeStorage.set(NOTIF_FIRED_KEY, fired);
         return sent;
@@ -3231,6 +3233,24 @@
           clearTimeout(this._dt);
           this._dt = setTimeout(() => this.writeDigest(), 800);
         };
+      })();
+
+      /* نسخهٔ اندروید: یادآورهای هشت روز آینده به زمان‌بند بومی سپرده می‌شود تا با بسته بودن برنامه هم اعلام شود */
+      NotifyModule.syncNative = async function () {
+        const NAT = (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.SmsReader) || null;
+        if (!NAT || !NAT.scheduleReminders) return;
+        try {
+          if (!(AppState.settings.notifySystem && this.perm() === 'granted')) { await NAT.cancelReminders(); return; }
+          const fired = SafeStorage.get(NOTIF_FIRED_KEY, {}), now = Date.now();
+          const clean = t => String(window.stripEmoji ? window.stripEmoji(t || '') : (t || '')).trim();
+          const items = this.schedule().filter(i => !fired[i.key] && i.at > now + 20000 && i.at < now + 8 * 86400000)
+            .sort((a, b) => a.at - b.at).slice(0, 60).map(i => ({ key: i.key, at: i.at, title: clean(i.title), body: clean(i.body) }));
+          await NAT.scheduleReminders({ items });
+        } catch (e) { /* best effort */ }
+      };
+      (function () {
+        const wd = NotifyModule.writeDigest;
+        NotifyModule.writeDigest = async function () { try { await wd.call(this); } finally { this.syncNative(); } };
       })();
 
       /* Android/Chrome installed PWA can wake the service worker now and then (browser decides when) */

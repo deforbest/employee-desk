@@ -1,4 +1,4 @@
-/* File: sms-ui.js | Version: 1.2.0 | Date: 2026-11-01
+/* File: sms-ui.js | Version: 1.3.0 | Date: 2026-11-01
    ثبت آسان تراکنش از پیامک بانکی. مرورگر اجازهٔ خواندن مستقیم پیامک را نمی‌دهد؛ ورودی از سه راه می‌آید:
    ۱) اشتراک‌گذاری پیامک به برنامه (اندروید، برنامهٔ نصب‌شده)  ۲) چسباندن متن  ۳) خواندن از کلیپ‌بورد.
    فقط مبلغ، بانک، نوع و تاریخ/ساعت ذخیره می‌شود؛ متن پیامک هرگز ذخیره یا ارسال نمی‌شود. */
@@ -9,7 +9,7 @@
   const K_CFG = 'emp_sms_cfg', K_INBOX = 'emp_sms_inbox', K_RULES = 'emp_sms_rules';
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-  let cfg = Object.assign({ enabled: false, mode: 'all', asked: false }, load(K_CFG, {}));
+  let cfg = Object.assign({ enabled: false, mode: 'select', asked: false }, load(K_CFG, {}));
   let inbox = Array.isArray(load(K_INBOX, [])) ? load(K_INBOX, []) : [];
   let rules = Array.isArray(load(K_RULES, [])) ? load(K_RULES, []) : [];
   let failed = [];            // فقط در حافظهٔ موقت؛ هیچ‌وقت ذخیره نمی‌شود
@@ -33,7 +33,7 @@
       if (!r) { if (raw.trim().length > 15) failed.push(raw); return; }
       const fp = P.fingerprint(r);
       if (inbox.some(x => x.fp === fp)) { dup++; return; }
-      const exists = F() && F().has(fp);
+      const exists = F() && (F().has(fp) || F().has(P.fingerprintLegacy(r)));
       inbox.unshift({ id: 'sm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: r.type, amount: r.amount, bank: r.bank, dateKey: r.dateKey, time: r.time, fp, dateFromSms: r.dateFromSms, dup: !!exists });
       added++;
     });
@@ -175,7 +175,7 @@
     D.body.appendChild(w);
     w.addEventListener('click', e => {
       const b = e.target.closest('[data-o]'); if (!b && e.target !== w) return; const o = b ? b.dataset.o : 'later';
-      if (o === 'yes') { cfg.enabled = true; cfg.asked = true; saveCfg(); syncSettings(); injectBtn(); w.remove(); open(); }
+      if (o === 'yes') { cfg.enabled = true; cfg.asked = true; saveCfg(); syncSettings(); syncNativeSenders(); injectBtn(); w.remove(); open(); }
       else { if (o === 'never') { cfg.asked = true; saveCfg(); } try { sessionStorage.setItem('emp_sms_later', '1'); } catch (x) {} w.remove(); }
     });
   }
@@ -205,7 +205,7 @@
   }
   function wireSettings() {
     const sw = D.getElementById('setSmsEnabled'), md = D.getElementById('setSmsMode');
-    if (sw) sw.addEventListener('change', () => { cfg.enabled = sw.checked; cfg.asked = true; saveCfg(); syncSettings(); });
+    if (sw) sw.addEventListener('change', () => { cfg.enabled = sw.checked; cfg.asked = true; saveCfg(); syncSettings(); syncNativeSenders(); });
     if (md) md.addEventListener('change', () => { cfg.mode = md.value === 'select' ? 'select' : 'all'; saveCfg(); });
     syncSettings();
   }
@@ -230,9 +230,32 @@
   /* ---------- نسخهٔ اندروید (نصبی): خواندن پیامک با اجازهٔ کاربر؛ فقط از فرستنده‌های تأییدشده ---------- */
   const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d]);
   let scanning = false;
-  async function nativePerm(ask) {
-    try { let r = await Native.checkPermissions(); if (r && r.sms === 'granted') return true; if (!ask) return false; r = await Native.requestPermissions({ permissions: ['sms'] }); return !!(r && r.sms === 'granted'); } catch (e) { return false; }
+  /* دیالوگ افشای برجسته: پیش از پنجرهٔ مجوز سیستم نشان داده می‌شود (الزام فروشگاه‌ها) */
+  function confirmDisclosure() {
+    return new Promise(resolve => {
+      const old = D.getElementById('smsDisc'); if (old) old.remove();
+      const w = el('div', 'sms-backdrop'); w.id = 'smsDisc'; w.style.zIndex = '3800';
+      const sh = el('div', 'sms-sheet'); sh.setAttribute('role', 'alertdialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', 'دسترسی به پیامک');
+      sh.appendChild(el('div', 'sms-head')).appendChild(el('strong', null, 'دسترسی به پیامک'));
+      sh.appendChild(el('p', 'sms-hint', 'دسترسی به پیامک صرفاً برای تشخیص آفلاین مبلغ، نام بانک و تاریخ تراکنش‌های بانکی روی گوشی شما استفاده می‌شود. پیامک‌های رمز پویا (رمز یک‌بارمصرف) کاملاً نادیده گرفته می‌شوند و هیچ متنی از پیامک‌های شما به سرورهای ما یا اشخاص ثالث ارسال یا ذخیره نمی‌گردد.'));
+      const act = el('div', 'sms-actions');
+      const ok = el('button', 'btn btn-primary', 'متوجه شدم، ادامه'); ok.type = 'button';
+      const no = el('button', 'btn btn-secondary', 'انصراف'); no.type = 'button';
+      act.appendChild(ok); act.appendChild(no); sh.appendChild(act); w.appendChild(sh); D.body.appendChild(w);
+      const done = v => { w.remove(); resolve(v); };
+      ok.addEventListener('click', () => done(true)); no.addEventListener('click', () => done(false));
+      w.addEventListener('click', e => { if (e.target === w) done(false); });
+    });
   }
+  async function nativePerm(ask) {
+    try {
+      let r = await Native.checkPermissions(); if (r && r.sms === 'granted') return true; if (!ask) return false;
+      if (!(await confirmDisclosure())) return false;
+      r = await Native.requestPermissions({ permissions: ['sms'] }); return !!(r && r.sms === 'granted');
+    } catch (e) { return false; }
+  }
+  // فرستنده‌های تأییدشده را برای گیرندهٔ پس‌زمینهٔ اندروید همگام می‌کند (اگر ثبت از پیامک خاموش باشد، فهرست خالی می‌شود)
+  function syncNativeSenders() { try { if (Native && Native.setSenders) Native.setSenders({ senders: cfg.enabled ? senders : [] }).catch(() => {}); } catch (e) {} }
   async function discover() { // فقط روی همین دستگاه و موقت؛ متن پیامک‌ها ذخیره نمی‌شود
     if (!(await nativePerm(true))) return { denied: true };
     const res = await Native.read({ since: Date.now() - 60 * 86400000, limit: 800 }); const map = new Map();
@@ -254,7 +277,7 @@
         if (m.date > maxD) maxD = m.date;
         const r = P.parseOne(m.body, { rules, sender: m.address, at: m.date }); if (!r) return;
         const fp = P.fingerprint(r); if (inbox.some(x => x.fp === fp)) return;
-        const exists = !!(F() && F().has(fp));
+        const exists = !!(F() && (F().has(fp) || F().has(P.fingerprintLegacy(r))));
         const it = { id: 'sm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), type: r.type, amount: r.amount, bank: r.bank, dateKey: r.dateKey, time: r.time, fp, dateFromSms: true, dup: exists };
         inbox.unshift(it); if (!exists) added.push(it);
       });
@@ -351,10 +374,10 @@
         inp.value = ''; return;
       }
       const picked = Array.from(box.querySelectorAll('input:checked')).map(i => i.dataset.addr);
-      senders = picked.slice(0, 50); save(K_SENDERS, senders);
+      senders = picked.slice(0, 50); save(K_SENDERS, senders); syncNativeSenders();
       const days = Number(w.querySelector('#smsFrom').value) || 0;
       try { localStorage.setItem(K_LAST, String(Date.now() - days * 86400000)); } catch (x) {}
-      cfg.enabled = true; cfg.asked = true; saveCfg(); syncSettings(); w.remove();
+      cfg.enabled = true; cfg.asked = true; saveCfg(); syncSettings(); syncNativeSenders(); w.remove();
       if (!senders.length) { const f = F(); if (f) f.toast('هیچ فرستنده‌ای انتخاب نشد'); return; }
       const n = await scanNative(true); const f = F(); if (f) f.toast(n ? fa(n) + ' تراکنش پیدا شد' : 'ذخیره شد');
       if (n) open();
@@ -381,11 +404,15 @@
 
   /* ---------- راه‌اندازی ---------- */
   pickShared();
+  function pullNativeShared() {
+    if (!Native || !Native.getSharedText) return;
+    Native.getSharedText().then(r => { const t = r && r.text; if (t) { try { sessionStorage.setItem('emp_share_in', t); } catch (e) {} if (!D.documentElement.classList.contains('auth-pending')) handleShared(); } }).catch(() => {});
+  }
   function init() {
-    injectBtn(); wireSettings(); updateBanner(); injectNativeRow();
+    injectBtn(); wireSettings(); updateBanner(); injectNativeRow(); syncNativeSenders(); pullNativeShared();
     if (Native) {
       const go = () => { if (D.visibilityState === 'visible' && !D.documentElement.classList.contains('auth-pending')) scanNative(false); };
-      D.addEventListener('visibilitychange', go); setInterval(go, 45000); setTimeout(go, 2500);
+      D.addEventListener('visibilitychange', () => { go(); if (D.visibilityState === 'visible') pullNativeShared(); }); setInterval(go, 45000); setTimeout(go, 2500);
     }
     const v = D.getElementById('view-finance');
     if (v) {
