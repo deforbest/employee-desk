@@ -1,0 +1,10 @@
+# File: cloudflare/wrangler.toml | Version: 1.0.0 | Date: 2026-11-01
+# تنظیمات پل کلادفلر؛ ذخیرهٔ گزارش‌ها کاملاً خاموش است تا بدنهٔ درخواست‌ها (ایمیل، نشانه‌های ورود) جایی ثبت نشود.
+# (مسیر main نسبت به نسخهٔ مستند تیم، با نام فایل واقعی این پروژه تطبیق داده شد.)
+name = "smart-workspace-supabase-proxy"
+main = "supabase-proxy.js"
+compatibility_date = "2026-10-01"
+
+[observability]
+enabled = false
+head_sampling_rate = 0
