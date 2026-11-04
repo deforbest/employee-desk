@@ -1,4 +1,4 @@
-# File: .github/workflows/android.yml | Version: 2.0.0 | Date: 2026-11-01
+# File: .github/workflows/android.yml | Version: 2.1.0 | Date: 2026-11-01
 # ساخت فایل نصبی اندروید (APK) رایگان روی گیت‌هاب. دستی اجرا می‌شود: Actions ← Build Android APK ← Run workflow.
 # برنامه داخل APK بسته‌بندی می‌شود (نه بارگذاری از اینترنت)، پس کدی که اجازهٔ خواندن پیامک دارد همان کد امضاشده است.
 name: Build Android APK
@@ -6,6 +6,8 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
+    tags:
+      - 'v*'
     branches: [ main ]
     paths:
       - 'android-app/**'
@@ -24,11 +26,13 @@ jobs:
     env:
       CAP_VERSION: 6.1.2
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout (pinned by commit)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17 (pinned by commit)
+        uses: actions/setup-java@c5195efecf7bdfc987ee827a71ef8b11521c0002 # v4.7.0
         with:
           distribution: temurin
           java-version: 17
@@ -68,12 +72,45 @@ jobs:
           npx cap add android
           PKG=android/app/src/main/java/com/deforbest/employeedesk
           mkdir -p "$PKG"
-          cp android-app/SmsReaderPlugin.java android-app/MainActivity.java "$PKG"/
+          cp android-app/*.java "$PKG"/
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' "$M"
-          sed -i 's/android:allowBackup="true"/android:allowBackup="false"/' "$M"
+          # مجوزها
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.RECEIVE_SMS" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' "$M"
+          # بدون پشتیبان‌گیری خودکار سیستم‌عامل
+          sed -i 's#android:allowBackup="true"#android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules"#' "$M"
+          mkdir -p android/app/src/main/res/xml
+          cat > android/app/src/main/res/xml/data_extraction_rules.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <data-extraction-rules>
+              <cloud-backup>
+                  <exclude domain="root" />
+                  <exclude domain="file" />
+                  <exclude domain="database" />
+                  <exclude domain="sharedpref" />
+                  <exclude domain="external" />
+              </cloud-backup>
+              <device-transfer>
+                  <exclude domain="root" />
+                  <exclude domain="file" />
+                  <exclude domain="database" />
+                  <exclude domain="sharedpref" />
+                  <exclude domain="external" />
+              </device-transfer>
+          </data-extraction-rules>
+          XMLEOF
+          # دریافت متن پیامک از دکمهٔ «اشتراک‌گذاری» گوشی (بدون نیاز به مجوز پیامک)
+          sed -i '0,/<\/activity>/s#</activity>#        <intent-filter>\n            <action android:name="android.intent.action.SEND" />\n            <category android:name="android.intent.category.DEFAULT" />\n            <data android:mimeType="text/plain" />\n        </intent-filter>\n    </activity>#' "$M"
+          # گیرندهٔ پیامک در پس‌زمینه (فقط سیستم‌عامل می‌تواند به آن پخش کند)
+          sed -i 's#</application>#    <receiver android:name=".SmsBroadcastReceiver" android:permission="android.permission.BROADCAST_SMS" android:exported="true">\n            <intent-filter android:priority="999">\n                <action android:name="android.provider.Telephony.SMS_RECEIVED" />\n            </intent-filter>\n        </receiver>\n    </application>#' "$M"
+          # حداقل اندروید ۷ (لازم برای کتابخانهٔ ذخیره‌سازی رمزنگاری‌شده)
+          sed -i -E 's/minSdkVersion = [0-9]+/minSdkVersion = 24/' android/variables.gradle
+          grep -q 'minSdkVersion = 24' android/variables.gradle
           grep -q READ_SMS "$M"
+          grep -q RECEIVE_SMS "$M"
           grep -q POST_NOTIFICATIONS "$M"
+          grep -q SmsBroadcastReceiver "$M"
+          grep -q 'android.intent.action.SEND' "$M"
+          grep -q 'data_extraction_rules' "$M"
 
       - name: App icon
         run: |
@@ -103,6 +140,11 @@ jobs:
                   }
               }
           }
+
+          dependencies {
+              implementation "androidx.security:security-crypto:1.1.0-alpha06"
+              implementation "androidx.work:work-runtime:2.9.0"
+          }
           EOF
 
       - name: Build release APK
@@ -123,6 +165,10 @@ jobs:
             ALIAS="$KS_ALIAS"; PASS="$KS_PASS"
             echo "Signing with your permanent key."
           else
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              echo "::error::SIGNING KEY NOT SET: release builds (v* tags) must be signed with the permanent key. Set ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS in Secrets."
+              exit 1
+            fi
             PASS=$(openssl rand -hex 16); ALIAS=emp
             keytool -genkeypair -keystore release.jks -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass "$PASS" -keypass "$PASS" -dname "CN=EmployeeDesk"
@@ -133,6 +179,8 @@ jobs:
             --out EmployeeDesk.apk aligned.apk
           "$BT/apksigner" verify --verbose EmployeeDesk.apk
           rm -f release.jks
+          sha256sum EmployeeDesk.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -140,6 +188,8 @@ jobs:
           tag_name: apk
           name: "فایل نصبی اندروید"
           body: "آخرین نسخهٔ فایل نصبی. شمارهٔ ساخت: ${{ github.run_number }}"
-          files: EmployeeDesk.apk
+          files: |
+            EmployeeDesk.apk
+            SHA256SUMS.txt
           make_latest: true
           overwrite_files: true
