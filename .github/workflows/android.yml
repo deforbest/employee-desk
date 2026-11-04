@@ -1,4 +1,4 @@
-# File: .github/workflows/android.yml | Version: 2.1.0 | Date: 2026-11-01
+# File: .github/workflows/android.yml | Version: 2.1.1 | Date: 2026-11-01
 # ساخت فایل نصبی اندروید (APK) رایگان روی گیت‌هاب. دستی اجرا می‌شود: Actions ← Build Android APK ← Run workflow.
 # برنامه داخل APK بسته‌بندی می‌شود (نه بارگذاری از اینترنت)، پس کدی که اجازهٔ خواندن پیامک دارد همان کد امضاشده است.
 name: Build Android APK
@@ -26,13 +26,13 @@ jobs:
     env:
       CAP_VERSION: 6.1.2
     steps:
-      - name: Checkout (pinned by commit)
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Set up JDK 17 (pinned by commit)
-        uses: actions/setup-java@c5195efecf7bdfc987ee827a71ef8b11521c0002 # v4.7.0
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
