@@ -1,4 +1,4 @@
-// File: android-app/SmsReaderPlugin.java | Version: 2.1.0 | Date: 2026-11-01
+// File: android-app/SmsReaderPlugin.java | Version: 2.2.0 | Date: 2026-11-01
 // پل بین برنامه و اندروید: خواندن پیامک (فقط با اجازهٔ کاربر)، کلیپ‌بورد، اعلان خصوصی با آیکون عدد روز،
 // زمان‌بند بومی یادآورها و همگام‌سازی فرستنده‌های مجاز برای گیرندهٔ پس‌زمینه.
 package com.deforbest.employeedesk;
@@ -7,6 +7,8 @@ import android.Manifest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
@@ -34,7 +36,8 @@ import java.util.Set;
 @CapacitorPlugin(
     name = "SmsReader",
     permissions = {
-        @Permission(alias = "sms", strings = { Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS }),
+        @Permission(alias = "sms", strings = { Manifest.permission.READ_SMS }),
+        @Permission(alias = "smsReceive", strings = { Manifest.permission.RECEIVE_SMS }),
         @Permission(alias = "notifications", strings = { "android.permission.POST_NOTIFICATIONS" })
     }
 )
@@ -142,6 +145,34 @@ public class SmsReaderPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("set_senders_failed");
         }
+    }
+
+
+    /* ---------------- دریافت پیامک در پس‌زمینه (اختیاری؛ فقط وقتی در ساخت فعال شده باشد) ---------------- */
+
+    private boolean receiveDeclared() {
+        try {
+            PackageInfo pi = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), PackageManager.GET_PERMISSIONS);
+            if (pi.requestedPermissions != null) {
+                for (String p : pi.requestedPermissions) if ("android.permission.RECEIVE_SMS".equals(p)) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
+    }
+
+    @PluginMethod
+    public void requestReceiveSms(PluginCall call) {
+        JSObject ret = new JSObject();
+        if (!receiveDeclared()) { ret.put("state", "unavailable"); call.resolve(ret); return; }
+        if (getPermissionState("smsReceive") == PermissionState.GRANTED) { ret.put("state", "granted"); call.resolve(ret); return; }
+        requestPermissionForAlias("smsReceive", call, "recvPermsCallback");
+    }
+
+    @PermissionCallback
+    private void recvPermsCallback(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("state", getPermissionState("smsReceive") == PermissionState.GRANTED ? "granted" : "denied");
+        call.resolve(ret);
     }
 
     /* ---------------- متن اشتراک‌گذاری‌شده ---------------- */

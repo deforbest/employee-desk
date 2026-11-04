@@ -1,4 +1,4 @@
-/* File: sms-ui.js | Version: 1.3.0 | Date: 2026-11-01
+/* File: sms-ui.js | Version: 1.3.1 | Date: 2026-11-01
    ثبت آسان تراکنش از پیامک بانکی. مرورگر اجازهٔ خواندن مستقیم پیامک را نمی‌دهد؛ ورودی از سه راه می‌آید:
    ۱) اشتراک‌گذاری پیامک به برنامه (اندروید، برنامهٔ نصب‌شده)  ۲) چسباندن متن  ۳) خواندن از کلیپ‌بورد.
    فقط مبلغ، بانک، نوع و تاریخ/ساعت ذخیره می‌شود؛ متن پیامک هرگز ذخیره یا ارسال نمی‌شود. */
@@ -251,7 +251,10 @@
     try {
       let r = await Native.checkPermissions(); if (r && r.sms === 'granted') return true; if (!ask) return false;
       if (!(await confirmDisclosure())) return false;
-      r = await Native.requestPermissions({ permissions: ['sms'] }); return !!(r && r.sms === 'granted');
+      r = await Native.requestPermissions({ permissions: ['sms'] });
+      const okSms = !!(r && r.sms === 'granted');
+      if (okSms && Native.requestReceiveSms) { try { Native.requestReceiveSms().catch(() => {}); } catch (e) {} } // فقط در ساخت‌هایی که دریافت پس‌زمینه فعال است
+      return okSms;
     } catch (e) { return false; }
   }
   // فرستنده‌های تأییدشده را برای گیرندهٔ پس‌زمینهٔ اندروید همگام می‌کند (اگر ثبت از پیامک خاموش باشد، فهرست خالی می‌شود)
