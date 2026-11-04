@@ -1,4 +1,4 @@
-# File: .github/workflows/android.yml | Version: 2.1.1 | Date: 2026-11-01
+# File: .github/workflows/android.yml | Version: 2.2.0 | Date: 2026-11-01
 # ساخت فایل نصبی اندروید (APK) رایگان روی گیت‌هاب. دستی اجرا می‌شود: Actions ← Build Android APK ← Run workflow.
 # برنامه داخل APK بسته‌بندی می‌شود (نه بارگذاری از اینترنت)، پس کدی که اجازهٔ خواندن پیامک دارد همان کد امضاشده است.
 name: Build Android APK
@@ -65,6 +65,8 @@ jobs:
           cp -r vendor www/vendor
 
       - name: Create Capacitor Android project
+        env:
+          ENABLE_SMS_RECEIVER: ${{ vars.ENABLE_SMS_RECEIVER }}
         run: |
           npm init -y >/dev/null
           npm install --no-audit --no-fund @capacitor/core@$CAP_VERSION @capacitor/cli@$CAP_VERSION @capacitor/android@$CAP_VERSION
@@ -75,7 +77,7 @@ jobs:
           cp android-app/*.java "$PKG"/
           M=android/app/src/main/AndroidManifest.xml
           # مجوزها
-          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.RECEIVE_SMS" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' "$M"
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' "$M"
           # بدون پشتیبان‌گیری خودکار سیستم‌عامل
           sed -i 's#android:allowBackup="true"#android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules"#' "$M"
           mkdir -p android/app/src/main/res/xml
@@ -100,15 +102,19 @@ jobs:
           XMLEOF
           # دریافت متن پیامک از دکمهٔ «اشتراک‌گذاری» گوشی (بدون نیاز به مجوز پیامک)
           sed -i '0,/<\/activity>/s#</activity>#        <intent-filter>\n            <action android:name="android.intent.action.SEND" />\n            <category android:name="android.intent.category.DEFAULT" />\n            <data android:mimeType="text/plain" />\n        </intent-filter>\n    </activity>#' "$M"
-          # گیرندهٔ پیامک در پس‌زمینه (فقط سیستم‌عامل می‌تواند به آن پخش کند)
+          # گیرندهٔ پیامک در پس‌زمینه: پیش‌فرض خاموش است، چون مجوز «دریافت پیامک» احتمالاً باعث مسدود شدن نصب توسط حفاظت گوگل می‌شود.
+          # برای روشن کردن: در Settings ← Variables یک متغیر به نام ENABLE_SMS_RECEIVER با مقدار true بساز.
+          if [ "$ENABLE_SMS_RECEIVER" = "true" ]; then
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECEIVE_SMS" />\n</manifest>#' "$M"
           sed -i 's#</application>#    <receiver android:name=".SmsBroadcastReceiver" android:permission="android.permission.BROADCAST_SMS" android:exported="true">\n            <intent-filter android:priority="999">\n                <action android:name="android.provider.Telephony.SMS_RECEIVED" />\n            </intent-filter>\n        </receiver>\n    </application>#' "$M"
+          grep -q RECEIVE_SMS "$M"
+          grep -q SmsBroadcastReceiver "$M"
+          fi
           # حداقل اندروید ۷ (لازم برای کتابخانهٔ ذخیره‌سازی رمزنگاری‌شده)
           sed -i -E 's/minSdkVersion = [0-9]+/minSdkVersion = 24/' android/variables.gradle
           grep -q 'minSdkVersion = 24' android/variables.gradle
           grep -q READ_SMS "$M"
-          grep -q RECEIVE_SMS "$M"
           grep -q POST_NOTIFICATIONS "$M"
-          grep -q SmsBroadcastReceiver "$M"
           grep -q 'android.intent.action.SEND' "$M"
           grep -q 'data_extraction_rules' "$M"
 
